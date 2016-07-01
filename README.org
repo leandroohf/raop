@@ -2,13 +2,139 @@
 
 
 * Dev 
-** Notes
 
+** Dev
 
-   number of text vars: 8 - 10
+   #+BEGIN_SRC R
+     library(jsonlite)
+
+     raop.file <- "pizza_request_dataset/pizza_request_dataset.json"
+     raop.df   <- fromJSON( raop.file, flatten=TRUE)
+   #+END_SRC
    
-   dim: 5671 x 33
+   #+BEGIN_SRC R
+     library(stringr)
 
+     raop.df$nword          <- str_count(raop.df[,8], "\\S+")
+     raop.df$has.link       <- str_detect( raop.df[,8], "https?://")
+     raop.df$activity.ratio <- raop.df[,21]/raop.df[,19]
+     raop.df$date <- as.POSIXct(raop.df[,32],origin="1970-01-01", tz = "UTC")
+     raop.df$first.half.of.month <- (day(raop.df$date) < 16)
+     raop.df$posted.raop.before  <- raop.df[,21] > 0
+
+   #+END_SRC
+
+   #+BEGIN_SRC R
+
+   df.rec <- raop.df[raop.df["requester_received_pizza"] == TRUE,]
+   df.not <- raop.df[raop.df["requester_received_pizza"] == FALSE,]
+
+   #+END_SRC
+
+
+   preprocessing raop.corpus
+   
+   #+BEGIN_SRC R
+     library(tm)
+
+     GetCleanedCorpus <- function(raop.df){
+
+         raop.corpus <- Corpus(VectorSource(raop.df[,8]))
+         raop.corpus <- tm_map( raop.corpus, removeNumbers)
+         raop.corpus <- tm_map(raop.corpus, tolower)
+         ## First remove stopword and then punctuation
+         ## Keep this oredr because of I'm -> becomes Im and that is not stopword
+         raop.corpus <- tm_map(raop.corpus, removeWords, stopwords("english"))
+         raop.corpus <- tm_map(raop.corpus, removeWords, c("will", "pizza",
+                                                           "can","get",
+                                                           "just","now",
+                                                           "last","really"))
+         raop.corpus <- tm_map( raop.corpus, removePunctuation)
+         raop.corpus <- tm_map(raop.corpus, stemDocument, language = "english")
+
+         raop.corpus <- tm_map( raop.corpus, PlainTextDocument) 
+
+
+         return(raop.corpus)
+     }
+
+     raop.corpus <- GetCleanedCorpus(raop.df)
+
+     rec.corpus <- GetCleanedCorpus(df.rec)
+     not.corpus <- GetCleanedCorpus(df.not)
+   #+END_SRC
+
+   #+BEGIN_SRC R
+     GetDocTermFreq <- function(corpus){
+
+         dtm <- DocumentTermMatrix(corpus)
+         term.freq <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)
+         ## wf <- data.frame(word=names(term.freq), freq=term.freq, row.names = NULL)   
+
+         return(term.freq)
+     }
+
+     raop.term.freq <- GetDocTermFreq(raop.corpus)
+
+     rec.term.freq <- GetDocTermFreq(rec.corpus)
+     not.term.freq <- GetDocTermFreq(not.corpus)
+   #+END_SRC
+   
+
+   #+BEGIN_SRC R
+     library(ggplot2)
+
+     PlotTermFreqDashBoard <- function(term.freq,freq.thr = 500){
+
+         wf <- data.frame(word=names(term.freq), freq=term.freq, row.names = NULL)   
+         p <- ggplot(subset(wf, freq> freq.thr), aes(word, freq))    
+         p <- p + geom_bar(stat="identity")   
+         p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))
+         print(p)
+
+     }
+
+     PlotTermFreqDashBoard(rec.term.freq)
+     PlotTermFreqDashBoard(not.term.freq)
+   #+END_SRC
+
+
+   Asssociation betwenn words
+
+   #+BEGIN_SRC R
+     findAssocs(dtm, c("pizza", "money") , corlimit=0.15) # specifying a correlation limit of 0.15 
+   #+END_SRC
+
+   #+BEGIN_SRC R
+     library(wordcloud)
+     set.seed(142)
+
+     wordcloud(names(raop.term.freq), raop.term.freq, min.freq=250, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+
+     wordcloud(names(rec.term.freq), rec.term.freq, min.freq=250, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+     wordcloud(names(not.term.freq), not.term.freq, min.freq=250, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+
+
+   #+END_SRC
+
+
+   #+BEGIN_SRC R
+   dtmss <- removeSparseTerms(dtm, 0.15) # This makes a matrix that is only 15% empty space, maximum.   
+   inspect(dtmss)
+   #+END_SRC
+
+** Links
+
+   https://snap.stanford.edu/data/web-RedditPizzaRequests.html
+
+   http://cs.stanford.edu/~althoff/raop-dataset/pizza_request_dataset.tar.gz
+   
+   https://www.reddit.com/r/Random_Acts_Of_Pizza/comments/4qmrpu/request_broke_and_cant_justify_eating_out/?st=iq2wotap&sh=b57d1a2b
+   
+** Notes
+   
+   number of text vars: 8 - 10
+   dim: 5671 x 33
 
    #+BEGIN_EXAMPLE
      [1] "giver_username_if_known"                              "in_test_set"                                         
@@ -30,3 +156,94 @@
      [33] "unix_timestamp_of_request_utc"                       
    #+END_EXAMPLE
   
+   =================================
+   
+   * Actionable
+     * You have control
+     * partial control
+   * Predictable
+     * I need the information in the time request
+
+   ---------------------------------
+
+   *actionable: something I have control and I can change*
+   I can use to predict
+
+   requester related features:
+   * reddit user account age
+   * karma points (which define a notion of status in the Reddit
+     community)
+   * username
+     * BadUser
+     * Iam scammer (scam = golpe, scammed enganado, scammer = golpista)
+       
+   scammer list   
+   https://www.reddit.com/r/UniversalScammerList/wiki/banlist
+
+   giver related feature:
+
+   post related feature: (listar as mais facei primeiros)
+   * +length+ ok
+     * ( str_count( "I am not   in       College", "\\S+"))
+       * df$nword <- str_count(df[,8], "\\S+")
+     * nchar( "I am not College") try both
+       * >> df$nchar <- nchar(df[,8])
+   * +karma+ (status, reputation) ok
+     * 26: requester_upvotes_minus_downvotes_at_request
+   * +score activity+ (adicionei estas vars) ok but i need to test
+     * 19: "requester_number_of_posts_at_request"
+     * 21: "requester_number_of_posts_on_raop_at_request
+     * "requester_account_age_in_days_at_request"
+   * +activity ratio+ (adicionei estas vars)
+     * 21/19:
+       "requester_number_of_posts_on_raop_at_request/"requester_number_of_posts_at_request"
+   * +community age+ ok
+   * +First half of month+
+   * Posted in RAOP before
+     * "requester_number_of_posts_on_raop_at_request" > 0
+   * +including image+ ok
+     * df$haslink <- str_detect( df[,8], "https?://") 
+
+   =================================
+   
+   Temporal:
+   * The beginner of the community has higher SR
+   * first fortnight of the month has SR (because many people receive
+     at the end of the month)
+   * day of the week? weekend? !?
+     
+*** Sub Reddit
+
+    PM: private maessage
+    
+    Pessoas podem postar se querem uma pizza e o motivo. Outra pessoal
+    le o post e decide u nao de doa a pizza baseado no que vc escreveu
+
+    Vc tambem pode oferecer uma pizza. As pessoas irao escrever alguma
+    coisa e vc da a pizza para as pessoas q vc mais gostou. POde ser
+    mais de uma.
+
+*** help with R n Python 
+
+    *Basic Text Mining in R*
+    https://rstudio-pubs-static.s3.amazonaws.com/31867_8236987cf0a8444e962ccd2aec46d9c3.htmla
+
+    *topic modelling gentle introduction*
+    https://eight2late.wordpress.com/2015/09/29/a-gentle-introduction-to-topic-modeling-using-r/
+    
+    LDA: topic modelling
+    Latent Dirichlet Allocation – a math-free introduction
+
+
+    https://ropensci.org/blog/2014/04/16/topic-modeling-in-R/
+
+    *Vis interativa legal*
+    https://ropensci.org/blog/2014/04/16/topic-modeling-in-R/
+
+
+    Interative topic modeling visualization
+    https://github.com/cpsievert/LDAvis/
+
+
+    About sentiment n topic modelling
+    https://cran.r-project.org/web/packages/tidytext/vignettes/tidying_casting.html
