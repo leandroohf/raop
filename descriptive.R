@@ -1,6 +1,7 @@
-library(feather)
-library(wordcloud)
-library(gridExtra)
+library(feather, quietly = TRUE )
+library(ggplot2, quietly = TRUE )
+library(wordcloud, quietly = TRUE )
+library(gridExtra, quietly = TRUE )
 
 source("./utils/utils.R")
 
