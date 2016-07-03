@@ -1,0 +1,13 @@
+college
+student
+university
+finals
+study
+studying
+class
+semester
+school
+roommate
+project
+tuition
+dorm

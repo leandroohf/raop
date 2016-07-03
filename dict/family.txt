@@ -1,0 +1,12 @@
+husband
+wife
+family
+parent
+parents
+mother
+father
+mom
+mum
+son
+dad
+daughter
