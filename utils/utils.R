@@ -9,8 +9,7 @@
 ##  impolite and remember to cite the author and give him his credits.
 ##* ****************************************************************
 
-
-library(tm)
+library(tm, quietly = TRUE )
 
 GetCleanedCorpus <- function(raop.df){
 
@@ -77,7 +76,7 @@ GetSentimentScoreFromCorpus <- function(raop.corpus, pos, neg){
     scores <- numeric(number.of.posts)
 
     for( k in (1:number.of.posts)){
-                                        # print(k)                        
+        ## print(k)                        
         post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
         scores[k]  <- GetPostSentimentScore(post.terms, pos, neg)
     }
@@ -85,42 +84,23 @@ GetSentimentScoreFromCorpus <- function(raop.corpus, pos, neg){
     return(scores)
 }
 
-## GetNarrativesScoreFromCorpus <- function(raop.corpus,desire.words,family.words,
-##                                          job.words,money.words, student.words){
-
 GetNarrativesScoreFromCorpus <- function(raop.corpus,narrative.words){
-    
-    ##cat("NOT implemented YET\n")
     
     number.of.posts <- length(raop.corpus)
     narrative.score  <- numeric(number.of.posts)
     nwords <- length(narrative.words)
     
-    ## desire.score  <- numeric(number.of.posts)
-    ## family.score  <- numeric(number.of.posts)
-    ## job.score     <- numeric(number.of.posts)
-    ## money.score   <- numeric(number.of.posts)
-    ## student.cores <- numeric(number.of.posts)
-
     for( k in (1:number.of.posts)){
-        ##print(k)                        
         post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
-        ##print(post.terms)
-
+        ## post score = count the number of shared  words
         narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/nwords
-        
-        ## desire.score  <- sum(!is.na(match(post.terms,desire.words)))
-        ## family.score  <- sum(!is.na(match(post.terms,family.words)))
-        ## job.score     <- sum(!is.na(match(post.terms,job.words)))
-        ## money.score   <- sum(!is.na(match(post.terms,money.words)))
-        ## student.score <- sum(!is.na(match(post.terms,student.words)))
-        
     }
+
+    ## Normalize post.scores
+    narrative.score[k] <- narrative.score[k]/max(narrative.score[k])
     
-    ##return(list(desire.score,family.words,job.words,money.words,student.words))
     return(narrative.score)
 }
-
 
 ConvertToDecile <- function(x,max_x, min_x){
 
@@ -134,4 +114,23 @@ ConvertToDecile <- function(x,max_x, min_x){
 TranformVarToMedianStandatVar <- function(x){
 
     return(x - median(x))
+}
+
+TransformVariable <- function(x, max_x, min_x){    
+    return( (x - median(x))/(max_x - min_x) )
+}
+
+TransformVariableToDecile <- function(x){
+
+    bp <- boxplot(x)
+    bp.max <- bp$stats[5]
+    bp.min <- bp$stats[1]
+    delta <- (bp.max - bp.min)/10
+    
+    breaks <- seq(from = bp.min, to = bp.max, by=delta)
+    
+    xc <- cut(x, breaks = breaks)
+    xcn <- as.numeric(xcut)
+    
+    return(xcn)
 }
