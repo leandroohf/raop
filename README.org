@@ -1,9 +1,60 @@
 
+* Introduction
 
+  * Explain waht is RAoP
+  * Discuss a little about article reference
+  * Discuss what we decided to do n why
+
+    
+* Descriptive
+
+#+BEGIN_SRC R :session
+names(raop.target)
+#+END_SRC  
+
+
+#+BEGIN_EXAMPLE
+[1] "in_test_set"                                        "request_id"                                        
+[3] "request_text"                                       "requester_account_age_in_days_at_request"          
+[5] "requester_days_since_first_post_on_raop_at_request" "requester_number_of_posts_at_request"              
+[7] "requester_number_of_posts_on_raop_at_request"       "requester_received_pizza"                          
+[9] "requester_upvotes_minus_downvotes_at_request"       "requester_username"                                
+[11] "nword"                                              "has.link"                                          
+[13] "request.date"                                       "first.half.of.month"                               
+[15] "posted.raop.before"                                 "post.sent"                                         
+[17] "is.weekend"                                        
+#+END_EXAMPLE
+
+
+  * "requester_days_since_first_post_on_raop_at_request"
+    * 85% => 0; 89% < 10 days (concentration in this var)
+  * requester_account_age_in_days_at_request
+    * 
+
+#+BEGIN_SRC R :session
+summary(raop.target[, cols.num])
+#+END_SRC
+
+
+#+BEGIN_EXAMPLE
+requester_account_age_in_days_at_request requester_days_since_first_post_on_raop_at_request requester_number_of_posts_at_request
+ Min.   :   0.000                         Min.   :  0.00                                     Min.   :  0.00                      
+ 1st Qu.:   3.585                         1st Qu.:  0.00                                     1st Qu.:  0.00                      
+ Median : 155.648                         Median :  0.00                                     Median :  5.00                      
+ Mean   : 252.905                         Mean   : 16.57                                     Mean   : 21.35                      
+ 3rd Qu.: 386.933                         3rd Qu.:  0.00                                     3rd Qu.: 22.00                      
+ Max.   :2809.751                         Max.   :785.46                                     Max.   :867.00                      
+ requester_number_of_posts_on_raop_at_request requester_upvotes_minus_downvotes_at_request requester_username     nword           post.sent      
+ Min.   :0.00000                              Min.   :  -173                               Length:5671        Min.   :   0.00   Min.   :-18.000  
+ 1st Qu.:0.00000                              1st Qu.:     3                               Class :character   1st Qu.:  34.00   1st Qu.:  0.000  
+ Median :0.00000                              Median :   170                               Mode  :character   Median :  59.00   Median :  1.000  
+ Mean   :0.05801                              Mean   :  1164                                                  Mean   :  77.51   Mean   :  1.311  
+ 3rd Qu.:0.00000                              3rd Qu.:  1159                                                  3rd Qu.:  98.00   3rd Qu.:  3.000  
+ Max.   :5.00000                              Max.   :155010                                                  Max.   :1411.00   Max.   : 27.000  
+#+END_EXAMPLE
 
 * Dev 
-
-** Dev
+** Dev [2016-07-01 Fri]
 
    #+BEGIN_SRC R
      library(jsonlite)
@@ -15,12 +66,14 @@
    #+BEGIN_SRC R
      library(stringr)
 
-     raop.df$nword          <- str_count(raop.df[,8], "\\S+")
-     raop.df$has.link       <- str_detect( raop.df[,8], "https?://")
-     raop.df$activity.ratio <- raop.df[,21]/raop.df[,19]
-     raop.df$date <- as.POSIXct(raop.df[,32],origin="1970-01-01", tz = "UTC")
-     raop.df$first.half.of.month <- (day(raop.df$date) < 16)
-     raop.df$posted.raop.before  <- raop.df[,21] > 0
+     raop.df$nword          <- str_count(raop.df[,"request_text"], "\\S+")
+     raop.df$has.link       <- str_detect( raop.df[,"request_text"], "https?://")
+     raop.df$activity.ratio <- raop.df[,"requester_number_of_posts_on_raop_at_request"]/raop.df[,"requester_number_of_posts_at_request"]
+     raop.df$request.date   <- as.POSIXct(raop.df[,"unix_timestamp_of_request"],origin="1970-01-01", tz = "UTC")
+
+     raop.df$first.half.of.month <- (day(raop.df$request.date) < 16)
+     raop.df$is.weekend          <- (wday(raop.df$request.date) %in%  c(1,6,7))
+     raop.df$posted.raop.before  <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
 
    #+END_SRC
 
@@ -51,10 +104,10 @@
                                                            "last","really"))
          raop.corpus <- tm_map( raop.corpus, removePunctuation)
          raop.corpus <- tm_map(raop.corpus, stemDocument, language = "english")
+         raop.corpus <- tm_map(raop.corpus, stripWhitespace)  
 
          raop.corpus <- tm_map( raop.corpus, PlainTextDocument) 
-
-
+ 
          return(raop.corpus)
      }
 
@@ -63,7 +116,7 @@
      rec.corpus <- GetCleanedCorpus(df.rec)
      not.corpus <- GetCleanedCorpus(df.not)
    #+END_SRC
-
+   
    #+BEGIN_SRC R
      GetDocTermFreq <- function(corpus){
 
@@ -79,7 +132,76 @@
      rec.term.freq <- GetDocTermFreq(rec.corpus)
      not.term.freq <- GetDocTermFreq(not.corpus)
    #+END_SRC
-   
+ 
+
+   #+BEGIN_SRC R
+     library(testthat)
+
+     TokenizeCorpusElement <- function(x){
+
+          return(unlist(stri_extract_all_words(as.character(x))))
+      }
+
+
+      GetPostSentimentScore <- function(post.terms, pos, neg){
+
+          stopifnot( typeof(post.terms) == "character")
+
+          pos.score <- sum(!is.na(match(post.terms,pos)))
+          neg.score <- sum(!is.na(match(post.terms,neg)))
+          sent.score <- pos.score - neg.score
+
+          return(sent.score)
+      }
+
+      GetSentimentScoreFromCorpus <- function(raop.corpus, pos, neg){
+
+          number.of.posts <- length(raop.corpus)
+          scores <- numeric(number.of.posts)
+
+          for( k in (1:number.of.posts)){
+              # print(k)                        
+              post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
+              scores[k]  <- GetPostSentimentScore(post.terms, pos, neg)
+          }
+
+          return(scores)
+      }
+
+      GetNarrativesFromCorpus <- function(raop.corpus,narratives.corpus ){
+
+          cat("NOT implemented YET\n")
+          number.of.posts <- length(raop.corpus)
+          ## scores <- numeric()
+
+          ## for( k in (1:number.of.posts)){
+          ##     # print(k)                        
+          ##     post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
+          ##     scores[k]  <- GetPostSentimentScore(post.terms, pos, neg)
+          ## }
+
+          ## return(scores)
+      }
+
+     test_GetSentimentScoreFromCorpus <- function(){
+
+         pos <- readLines("./data/positive-words.txt")
+         neg <- readLines("./data/negative-words.txt")
+
+         # 3 docs
+         x <- c('hug celebrate humor party ', 'abnormal alarm idol anger', 'husband family parents')
+
+         x.corpus = Corpus(VectorSource(x))
+
+         s <- GetSentimentScoreFromCorpus(x.corpus,pos,neg)
+
+
+         expect_equal(s, c(3,-2,0))
+     }
+
+     raop.df$post.sent <- GetSentimentScoreFromCorpus(raop.corpus, pos, neg)
+   #+END_SRC
+  
 
    #+BEGIN_SRC R
      library(ggplot2)
@@ -104,15 +226,28 @@
    #+BEGIN_SRC R
      findAssocs(dtm, c("pizza", "money") , corlimit=0.15) # specifying a correlation limit of 0.15 
    #+END_SRC
+   
+   Help plot side by side
 
+   https://rstudio-pubs-static.s3.amazonaws.com/40520_3fa09bedc3d44771b33873314971ffd1.html
+   
    #+BEGIN_SRC R
      library(wordcloud)
      set.seed(142)
 
-     wordcloud(names(raop.term.freq), raop.term.freq, min.freq=250, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+     wordcloud(names(raop.term.freq), raop.term.freq, min.freq=250,
+               scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
 
-     wordcloud(names(rec.term.freq), rec.term.freq, min.freq=250, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
-     wordcloud(names(not.term.freq), not.term.freq, min.freq=250, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+
+     par(mfrow=c(1,2))
+
+     text(x=0.5, y=1.1, "pizza")
+     wordcloud(names(rec.term.freq), rec.term.freq, min.freq=250,
+               scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+
+     text(x=0.5, y=1.1, "no pizza")
+     wordcloud(names(not.term.freq), not.term.freq, min.freq=250,
+               scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
 
 
    #+END_SRC
@@ -123,6 +258,604 @@
    inspect(dtmss)
    #+END_SRC
 
+** Descripitve [2016-07-01 Fri]
+
+
+#+BEGIN_SRC R
+ 
+  library(heplots)
+
+  hist(raop.target[,"requester_account_age_in_days_at_request"])
+
+  ## requester_days_since_first_post_on_raop_at_request
+  hist(raop.target[,"requester_account_age_in_days_at_request"])
+  boxplot(data = raop.target, requester_days_since_first_post_on_raop_at_request ~ requester_received_pizza)
+  plot(raop.target$requester_days_since_first_post_on_raop_at_request, raop.target$requester_received_pizza)
+
+  model.aov <- aov(requester_days_since_first_post_on_raop_at_request ~ requester_received_pizza, data = raop.target)
+
+  summary(model.aov)
+  etasq(model.aov, partial = FALSE)
+
+  # nword
+
+  hist(raop.target[,"nword"])
+  boxplot(data = raop.target, nword ~ requester_received_pizza)
+  plot(raop.target$nword, raop.target$requester_received_pizza)
+
+  summary(aov(nword ~ requester_received_pizza, data = raop.target))
+
+  summary(model.aov)
+  etasq(model.aov, partial = FALSE)
+
+#+END_SRC
+
+
+Alguma coisa com xgboost
+
+#+BEGIN_SRC R
+  library(xgboost)
+
+  cols.pred <- c("requester_received_pizza",
+                 "requester_account_age_in_days_at_request",
+                 "requester_days_since_first_post_on_raop_at_request",
+                 "requester_number_of_posts_at_request",
+                 "requester_number_of_posts_on_raop_at_request",
+                 "requester_upvotes_minus_downvotes_at_request",
+                 "nword", "has.link",
+                 "first.half.of.month",
+                 "posted.raop.before", "post.sent","is.weekend")
+
+  dev.data <- raop.target[ raop.target$in_test_set == FALSE ,cols.pred]
+
+  train.size <- 2424
+  val.size   <- nrow(dev.data) - train.size
+
+  set.seed(13)
+  r <- sample(nrow(dev.data),train.size)
+
+  train.data <- dev.data[r,]
+  val.data   <- dev.data[-r,]
+
+  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]), label=as.matrix(train.data[,'requester_received_pizza']))
+
+  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]), label=as.matrix(val.data[,'requester_received_pizza']))
+
+  watchlist <- list(train=xgb.train, val=xgb.val)
+  xgb.model <- xgb.train(data = xgb.train, nthread = 3, nround = 21,
+                         watchlist=watchlist,
+                         objective = "binary:logistic", verbose=0)
+
+  param.list <- list("objective" = "binary:logistic",
+                "eta" = 0.01,
+                "min_child_weight" = 2,
+                "subsample" = 0.80,
+                "colsample_bytree" = 0.80,
+                "scale_pos_weight" = 1.00,
+                "silent" = 1,
+                "booster" = "gbtree",
+                "max_depth" = 9,
+                "eval_metric" = "error")
+
+  xgb.model <- xgb.train(param = param.list,
+                         data = xgb.train, nthread = 3,
+                         nround = 20,
+                         watchlist=watchlist,
+                         verbose=1)
+
+  train.matrix <- as.matrix(train.data[,names(train.data) != 'requester_received_pizza'])
+  train.matrix.names = dimnames(train.matrix)[[2]]
+
+  importance_matrix <- xgb.importance(train.matrix.names,
+                                      model = xgb.model)
+
+  p <- xgb.plot.importance(importance_matrix)
+  print(p)
+
+  cols.selected <- c("requester_received_pizza",
+                    "nword",
+                    "requester_account_age_in_days_at_request",
+                    "requester_upvotes_minus_downvotes_at_request",
+                    "post.sent",
+                    "requester_days_since_first_post_on_raop_at_request")
+
+  m1 <- glm(requester_received_pizza ~ .,
+            family=binomial(link='logit'),
+            data=train.data[,cols.selected])
+
+  summary(m1)
+
+  cols.selected <- c("requester_received_pizza",
+                     "nword",
+                     "requester_account_age_in_days_at_request",
+                     "requester_upvotes_minus_downvotes_at_request",
+                     "post.sent",
+                     "has.link",
+                     "posted.raop.before",
+                     "requester_days_since_first_post_on_raop_at_request")
+
+  m2 <- glm(requester_received_pizza ~ .,
+            family=binomial(link='logit'),
+            data=train.data[,cols.selected])
+
+  summary(m2)
+
+  m3 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request*
+                requester_upvotes_minus_downvotes_at_request +
+                post.sent + has.link + posted.raop.before +
+                requester_days_since_first_post_on_raop_at_request,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m3)
+
+  m4 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request + 
+                post.sent +
+                has.link +
+                posted.raop.before +
+                requester_days_since_first_post_on_raop_at_request,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m4)
+
+  m5 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request + post.sent +
+                has.link + posted.raop.before +  is.weekend +
+                requester_days_since_first_post_on_raop_at_request,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m5)
+
+#+END_SRC   
+
+
+#+BEGIN_SRC R
+
+  ## If I have time I can see it later
+  y <- train.data[, "requester_received_pizza"]
+  test <- chisq.test(y,train.data$nword)
+  print(test)
+
+#+END_SRC
+
+** Descriptive [2016-07-02 Sat]
+
+
+#+BEGIN_SRC R
+
+  library(tidyr)
+  library(dplyr)
+
+  desire.words  <- readLines("./dict/desire.txt")
+  family.words  <- readLines("./dict/family.txt")
+  job.words     <- readLines("./dict/job.txt")
+  money.words   <- readLines("./dict/money.txt")
+  student.words <- readLines("./dict/student.txt")
+
+  narratives.words <- c(desire.words,
+                        family.words,
+                        job.words,
+                        money.words,
+                        student.words)
+
+  nw <- 21
+  pizza.data.view <- data.frame(word=names(pizza.term.freq),
+                                freq=pizza.term.freq,
+                                row.names = NULL)
+
+  pizza.data.view <-
+      pizza.data.view %>% dplyr::filter(word %in% narratives.words)
+
+
+  pizza.data.view$word <-
+      factor( pizza.data.view$word,
+             levels=pizza.data.view[order(pizza.data.view$freq), "word"])
+
+
+  p.left <- ggplot(pizza.data.view[1:nw,], aes(x=word, y=freq)) + 
+       geom_bar(stat="identity") + 
+       coord_flip() + ggtitle("pizza")
+
+  nopizza.data.view <- data.frame(word=names(nopizza.term.freq),
+                                  freq=nopizza.term.freq,
+                                  row.names = NULL)
+
+  nopizza.data.view <-
+      nopizza.data.view %>% dplyr::filter(word %in% narratives.words)
+
+  nopizza.data.view$word <-
+      factor( nopizza.data.view$word,
+             levels=nopizza.data.view[order(nopizza.data.view$freq), "word"])
+
+  p.right <- ggplot(nopizza.data.view[1:nw,], aes(x=word, y=freq)) + 
+      geom_bar(stat="identity") + 
+      coord_flip() + ggtitle("no pizza")
+
+  grid.arrange (p.left, p.right, ncol=2)
+#+END_SRC
+
+
+Investigating requester n numerical vars
+
+#+BEGIN_SRC R
+
+
+   data.view <- raop.target[, cols.num]
+   number.col <- ncol(data.view) - 2 
+
+   data.view <- data.view %>%
+       tidyr::gather(vars, value, -requester_username,
+                     -requester_received_pizza)
+
+   p <- ggplot(data=data.view,aes(x=value))
+   p <- p + geom_histogram() + facet_wrap(requester_received_pizza ~ vars ,
+                                          scale = "free",
+                                          ncol = number.col )
+   print(p)
+
+
+
+
+  df <- raop.target %>% dplyr::filter(nword < 140)
+
+  p <- ggplot(data = df, aes(x = nword, y=post.sent, colour=requester_received_pizza)) +
+      geom_point()
+
+  p
+
+
+
+  p <- ggplot (df,
+               aes (x = nword, y = post.sent,
+                    fill = requester_received_pizza,
+                    colour = requester_received_pizza)) +
+      geom_hex(bins = 100)+
+      stat_binhex(bins = 50, aes(alpha = count))
+
+
+  p
+
+  p <- ggplot (df,
+               aes (x = nword, y = post.sent,
+                    fill = requester_received_pizza)) +
+      stat_binhex(aes(x = nword, y = post.sent,alpha = ..count..))
+
+  p
+
+
+  ggplot(df, aes(nword, post.sent)) + stat_binhex(aes(fill=..count..))
+
+
+
+  ## =================================
+
+  #placeholder plot - prints nothing at all
+  empty <- ggplot() + geom_point(aes(1,1), colour="white") +
+      theme(
+          plot.background = element_blank(), 
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          panel.border = element_blank(), 
+          panel.background = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank()
+       )
+
+  #scatterplot of x and y variables
+  scatter <- ggplot(df,aes(nword, post.sent)) + 
+    geom_point(aes(color=requester_received_pizza)) + 
+    scale_color_manual(values = c("orange", "purple")) + 
+    theme(legend.position=c(1,1),legend.justification=c(1,1)) 
+
+  #marginal density of x - plot on top
+  plot_top <- ggplot(df, aes(nword, fill=requester_received_pizza)) + 
+    geom_density(alpha=.5) + 
+    scale_fill_manual(values = c("orange", "purple")) + 
+    theme(legend.position = "none")
+
+  #marginal density of y - plot on the right
+  plot_right <- ggplot(df, aes(post.sent, fill=requester_received_pizza)) + 
+    geom_density(alpha=.5) + 
+    coord_flip() + 
+    scale_fill_manual(values = c("orange", "purple")) + 
+    theme(legend.position = "none") 
+
+  #arrange the plots together, with appropriate height and width for each row and column
+  grid.arrange(plot_top, empty, scatter, plot_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
+ 
+  plot of chunk unnamed-chunk-6
+
+#+END_SRC
+
+Quantos 
+
+#+BEGIN_SRC R
+  raop.target %>%
+      dplyr::filter( requester_received_pizza == TRUE) %>%
+      dplyr::select( one_of("nword")) %>%
+      summary()
+
+  raop.target %>%
+      dplyr::filter( requester_received_pizza == FALSE) %>%
+      dplyr::select( one_of("nword")) %>%
+      summary()
+
+  x <- raop.target %>%
+      dplyr::filter( requester_received_pizza == TRUE) %>%
+      dplyr::filter( nword < 500) %>%
+      dplyr::select( nword)
+
+  hist(x$nword)
+
+  raop.target %>%
+      dplyr::select( one_of("has.link","requester_received_pizza")) %>%
+      table()
+#+END_SRC
+
+** Model diagnostic [2016-07-02 Sat]
+
+
+   #+BEGIN_SRC R
+     m4 <- glm(requester_received_pizza ~ nword +
+                   requester_account_age_in_days_at_request + 
+                   post.sent +
+                   has.link +
+                   posted.raop.before +
+                   requester_days_since_first_post_on_raop_at_request,
+               family=binomial(link='logit'),
+               data=train.data)
+
+     summary(m4)
+
+     y.train <- train.data[,"requester_received_pizza"]
+     pred    <- predict(m4, type = 'response')
+
+     ## score
+     z <- log(pred/(1.0-pred))
+
+     #confusion matrix
+     table(y.train, pred > 0.5)
+
+     # ROCR Curve
+     library(ROCR)
+     ROCRpred <- prediction(pred, y.train)
+     ROCRperf <- performance(ROCRpred, 'tpr','fpr')
+
+     plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
+     abline(a = 0.0, b=1.0,col = "lightgray", lty = 2)
+
+
+     data.view <- train.data
+     data.view$requester_received_pizza <- as.numeric(data.view$requester_received_pizza)
+     data.view$z = z
+
+     p <- ggplot(data.view, aes(x=z, y=requester_received_pizza)) + geom_point() + 
+         stat_smooth(method="glm", family="binomial",s=FALSE)
+
+
+     p <- ggplot(data.view, aes(x=z, y=requester_received_pizza)) + geom_point() + 
+         geom_smooth(method = "glm", method.args = list(family = "binomial")
+
+     print(p)
+   #+END_SRC
+
+   
+** Model diag balancemaento [2016-07-03 Sun]
+
+
+#+BEGIN_SRC R
+  TransformVariable <- function(x, max_x, min_x){    
+      return( (x - median(x))/(max_x - min_x) )
+  }
+
+  TransformVariableToDecile <- function(x){
+    
+      bp <- boxplot(x)
+      bp.max <- bp$stats[5]
+      bp.min <- bp$stats[1]
+      delta <- (bp.max - bp.min)/10
+    
+      breaks <- seq(from = bp.min, to = bp.max, by=delta)
+
+      xc <- cut(x, breaks = breaks)
+      xcn <- as.numeric(xcut)
+
+      return(xcn)
+  }
+
+  cols.pred <- c("requester_received_pizza",
+                 "requester_account_age_in_days_at_request",
+                 "requester_number_of_posts_at_request",
+                 "requester_upvotes_minus_downvotes_at_request",
+                 "nword", "has.link",
+                 "first.half.of.month",
+                 "posted.raop.before", "post.sent","is.weekend")
+
+  ## Rebalance class
+  dev.data <- raop.target %>%
+      dplyr::filter( requester_received_pizza == TRUE) %>%
+      dplyr::select( one_of(cols.pred))
+
+  samp.data <- raop.target %>%
+      dplyr::filter( requester_received_pizza == FALSE) %>%
+      dplyr::select( one_of(cols.pred)) %>%
+      dplyr::sample_n(nrow(dev.data),replace=FALSE)
+
+
+  dev.data <- rbind(dev.data,samp.data)
+
+
+  ## Tranforms vars
+
+  cols.to.transform <- c("requester_account_age_in_days_at_request",
+                         "requester_number_of_posts_at_request",
+                         "requester_upvotes_minus_downvotes_at_request",
+                         "nword", 
+                         "post.sent")
+
+
+  for( cc in cols.to.transform){
+      print(cc)
+      x <- unlist((dev.data[, cc]))
+      dev.data[, cc] <- TransformVariable( x, max(x), min(x) )
+  }
+
+  train.size <- 1956
+  val.size   <- nrow(dev.data) - train.size
+
+  set.seed(13)
+  r <- sample(nrow(dev.data),train.size)
+
+  train.data <- dev.data[r,]
+  val.data   <- dev.data[-r,]
+
+  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]), label=as.matrix(train.data[,'requester_received_pizza']))
+
+  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]), label=as.matrix(val.data[,'requester_received_pizza']))
+
+  watchlist <- list(train=xgb.train, val=xgb.val)
+  xgb.model <- xgb.train(data = xgb.train, nthread = 3, nround = 150,
+                         watchlist=watchlist,
+                         objective = "binary:logistic", verbose=0)
+
+
+  train.matrix <- as.matrix(train.data[,names(train.data) != 'requester_received_pizza'])
+  train.matrix.names = dimnames(train.matrix)[[2]]
+
+  importance_matrix <- xgb.importance(train.matrix.names,
+                                        model = xgb.model)
+
+  p <- xgb.plot.importance(importance_matrix)
+  print(p)
+#+END_SRC
+
+testandos os narratives scores
+
+#+BEGIN_SRC R
+  TransformVariable <- function(x, max_x, min_x){    
+      return( (x - median(x))/(max_x - min_x) )
+  }
+
+  TransformVariableToDecile <- function(x){
+
+      bp <- boxplot(x)
+      bp.max <- bp$stats[5]
+      bp.min <- bp$stats[1]
+      delta <- (bp.max - bp.min)/10
+
+      breaks <- seq(from = bp.min, to = bp.max, by=delta)
+
+      xc <- cut(x, breaks = breaks)
+      xcn <- as.numeric(xcut)
+
+      return(xcn)
+  }
+
+  cols.pred <- c("requester_received_pizza",
+                 "requester_account_age_in_days_at_request",
+                 "requester_number_of_posts_at_request",
+                 "requester_upvotes_minus_downvotes_at_request",
+                 "nword", "has.link",
+                 "first.half.of.month",
+                 "posted.raop.before", "post.sent","is.weekend",
+                 "desire.score","family.score","money.score",
+                 "job.score", "student.score")
+
+  ## Rebalance class
+  dev.data <- raop.target %>%
+      dplyr::filter( requester_received_pizza == TRUE) %>%
+      dplyr::select( one_of(cols.pred))
+
+  samp.data <- raop.target %>%
+      dplyr::filter( requester_received_pizza == FALSE) %>%
+      dplyr::select( one_of(cols.pred)) %>%
+      dplyr::sample_n(nrow(dev.data),replace=FALSE)
+
+  dev.data <- rbind(dev.data,samp.data)
+
+  ## Tranforms vars
+  cols.to.transform <- c("requester_account_age_in_days_at_request",
+                         "requester_number_of_posts_at_request",
+                         "requester_upvotes_minus_downvotes_at_request",
+                         "nword", 
+                         "post.sent")
+
+  for( cc in cols.to.transform){
+      print(cc)
+      x <- unlist((dev.data[, cc]))
+      dev.data[, cc] <- TransformVariable( x, max(x), min(x) )
+  }
+
+  train.size <- 1956
+  val.size   <- nrow(dev.data) - train.size
+
+  set.seed(13)
+  r <- sample(nrow(dev.data),train.size)
+
+  train.data <- dev.data[r,]
+  val.data   <- dev.data[-r,]
+
+  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]), label=as.matrix(train.data[,'requester_received_pizza']))
+
+  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]), label=as.matrix(val.data[,'requester_received_pizza']))
+
+  watchlist <- list(train=xgb.train, val=xgb.val)
+  xgb.model <- xgb.train(data = xgb.train, nthread = 3, nround = 40,
+                         watchlist=watchlist,
+                         objective = "binary:logistic", verbose=0)
+
+
+  train.matrix <- as.matrix(train.data[,names(train.data) != 'requester_received_pizza'])
+  train.matrix.names = dimnames(train.matrix)[[2]]
+
+  importance_matrix <- xgb.importance(train.matrix.names,
+                                        model = xgb.model)
+
+  p <- xgb.plot.importance(importance_matrix)
+  print(p)
+
+
+  ##=================================
+
+  m6 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request +
+                requester_number_of_posts_at_request +
+                requester_upvotes_minus_downvotes_at_request +
+                post.sent +
+                money.score +
+                job.score +
+                student.score +
+                family.score +
+                has.link +
+                posted.raop.before,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m6)
+
+  m7 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request +
+                requester_upvotes_minus_downvotes_at_request +
+                post.sent +
+                money.score +
+                job.score +
+                student.score +
+                family.score +
+                has.link +
+                posted.raop.before,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m7)
+#+END_SRC
+
 ** Links
 
    https://snap.stanford.edu/data/web-RedditPizzaRequests.html
@@ -130,89 +863,235 @@
    http://cs.stanford.edu/~althoff/raop-dataset/pizza_request_dataset.tar.gz
    
    https://www.reddit.com/r/Random_Acts_Of_Pizza/comments/4qmrpu/request_broke_and_cant_justify_eating_out/?st=iq2wotap&sh=b57d1a2b
+
+
+   =================================
+
+   Search about RAOP n data analysis on the web:
+
+   From kaggle public competition
+   https://www.kaggle.com/c/random-acts-of-pizza
+   https://www.kaggle.com/benhamner/random-acts-of-pizza/wordclouds
+
+
+   News or blogs
+
+   http://www.dailydot.com/parsec/reddit-random-acts-of-pizza-study-free-stuff/
+   
+   http://www.slate.com/blogs/future_tense/2014/05/27/researchers_at_stanford_analyzed_random_acts_of_pizza_posts_on_reddit.html
+   
+   http://www.huffingtonpost.com/2013/04/16/random-acts-of-pizza-boston-reddit-marathon_n_3094151.html
+   
+   Bot on github (javascript)
+   https://github.com/interwho/RAoPBot
    
 ** Notes
+*** Tasks note about what I have todo
+    
+    1. Defining your objective?
+       1. Questions to try answer
+	  
+	  * Are there certain characteristics about the requestor that
+            correlate with a successful pizza request?
+	  * Are there well defined groups of RAoP requestors?
+	  * What, if anything, can you determine from the request texts? 
+	  * If you were to build a RAoP predictor how would you go
+            about designing it, and what would be good features to
+            use?
+	  * Anything else about the data that is noteworthy, and why. 
+
+       2. Make a question?
+       3. QDT?
+    2. Data preping
+       1. missing ?
+       2. outliers ?
+       3. data distributions? Skewness
+       4. classes balances
+    3. Descriptive
+       1. Summary
+       2. Good visualizations
+    4. Model dev
+       1. Data split: train, val n test
+       2. Features
+	  1. Selections
+	     1. xgboost
+	     2. based on the article
+	     3. some guess
+	  2. Classify features
+	     1. user; post; attribute
+	     2. actionable; non controlled
+       3. validation diagnostics
+       4. Tunning
+    5. Report n Presentations
+       1. Resulted/business oreinted
+       2. Explain what we did
+	  1. explain the RAOP
+	  2. explain what did you discovery in the data
+	  3. explaing the models and why did you use it?
+	  4. explain the model interpretation n impact in business?
+	     
+    =================================
    
-   number of text vars: 8 - 10
-   dim: 5671 x 33
+     * Actionable
+       * You have control
+       * partial control
+     * Predictable
+       * I need the information in the time request
 
-   #+BEGIN_EXAMPLE
-     [1] "giver_username_if_known"                              "in_test_set"                                         
-     [3] "number_of_downvotes_of_request_at_retrieval"          "number_of_upvotes_of_request_at_retrieval"           
-     [5] "post_was_edited"                                      "request_id"                                          
-     [7] "request_number_of_comments_at_retrieval"              "request_text"                                        
-     [9] "request_text_edit_aware"                              "request_title"                                       
-     [11] "requester_account_age_in_days_at_request"             "requester_account_age_in_days_at_retrieval"          
-     [13] "requester_days_since_first_post_on_raop_at_request"   "requester_days_since_first_post_on_raop_at_retrieval"
-     [15] "requester_number_of_comments_at_request"              "requester_number_of_comments_at_retrieval"           
-     [17] "requester_number_of_comments_in_raop_at_request"      "requester_number_of_comments_in_raop_at_retrieval"   
-     [19] "requester_number_of_posts_at_request"                 "requester_number_of_posts_at_retrieval"              
-     [21] "requester_number_of_posts_on_raop_at_request"         "requester_number_of_posts_on_raop_at_retrieval"      
-     [23] "requester_number_of_subreddits_at_request"            "requester_received_pizza"                            
-     [25] "requester_subreddits_at_request"                      "requester_upvotes_minus_downvotes_at_request"        
-     [27] "requester_upvotes_minus_downvotes_at_retrieval"       "requester_upvotes_plus_downvotes_at_request"         
-     [29] "requester_upvotes_plus_downvotes_at_retrieval"        "requester_user_flair"                                
-     [31] "requester_username"                                   "unix_timestamp_of_request"                           
-     [33] "unix_timestamp_of_request_utc"                       
-   #+END_EXAMPLE
-  
-   =================================
-   
-   * Actionable
-     * You have control
-     * partial control
-   * Predictable
-     * I need the information in the time request
+     ---------------------------------
 
-   ---------------------------------
-
-   *actionable: something I have control and I can change*
-   I can use to predict
-
-   requester related features:
-   * reddit user account age
-   * karma points (which define a notion of status in the Reddit
-     community)
-   * username
-     * BadUser
-     * Iam scammer (scam = golpe, scammed enganado, scammer = golpista)
-       
-   scammer list   
-   https://www.reddit.com/r/UniversalScammerList/wiki/banlist
-
-   giver related feature:
-
-   post related feature: (listar as mais facei primeiros)
-   * +length+ ok
-     * ( str_count( "I am not   in       College", "\\S+"))
-       * df$nword <- str_count(df[,8], "\\S+")
-     * nchar( "I am not College") try both
-       * >> df$nchar <- nchar(df[,8])
-   * +karma+ (status, reputation) ok
-     * 26: requester_upvotes_minus_downvotes_at_request
-   * +score activity+ (adicionei estas vars) ok but i need to test
-     * 19: "requester_number_of_posts_at_request"
-     * 21: "requester_number_of_posts_on_raop_at_request
-     * "requester_account_age_in_days_at_request"
-   * +activity ratio+ (adicionei estas vars)
-     * 21/19:
-       "requester_number_of_posts_on_raop_at_request/"requester_number_of_posts_at_request"
-   * +community age+ ok
-   * +First half of month+
-   * Posted in RAOP before
-     * "requester_number_of_posts_on_raop_at_request" > 0
-   * +including image+ ok
-     * df$haslink <- str_detect( df[,8], "https?://") 
-
-   =================================
-   
-   Temporal:
-   * The beginner of the community has higher SR
-   * first fortnight of the month has SR (because many people receive
-     at the end of the month)
-   * day of the week? weekend? !?
+     *actionable: something I have control and I can change*
+     I can use to predict
      
-*** Sub Reddit
+*** Known data first notes
+    number of text vars: 8 - 10
+    dim: 5671 x 33
+
+     #+BEGIN_EXAMPLE
+       [1] "giver_username_if_known"                              "in_test_set"                                         
+       [3] "number_of_downvotes_of_request_at_retrieval"          "number_of_upvotes_of_request_at_retrieval"           
+       [5] "post_was_edited"                                      "request_id"                                          
+       [7] "request_number_of_comments_at_retrieval"              "request_text"                                        
+       [9] "request_text_edit_aware"                              "request_title"                                       
+       [11] "requester_account_age_in_days_at_request"             "requester_account_age_in_days_at_retrieval"          
+       [13] "requester_days_since_first_post_on_raop_at_request"   "requester_days_since_first_post_on_raop_at_retrieval"
+       [15] "requester_number_of_comments_at_request"              "requester_number_of_comments_at_retrieval"           
+       [17] "requester_number_of_comments_in_raop_at_request"      "requester_number_of_comments_in_raop_at_retrieval"   
+       [19] "requester_number_of_posts_at_request"                 "requester_number_of_posts_at_retrieval"              
+       [21] "requester_number_of_posts_on_raop_at_request"         "requester_number_of_posts_on_raop_at_retrieval"      
+       [23] "requester_number_of_subreddits_at_request"            "requester_received_pizza"                            
+       [25] "requester_subreddits_at_request"                      "requester_upvotes_minus_downvotes_at_request"        
+       [27] "requester_upvotes_minus_downvotes_at_retrieval"       "requester_upvotes_plus_downvotes_at_request"         
+       [29] "requester_upvotes_plus_downvotes_at_retrieval"        "requester_user_flair"                                
+       [31] "requester_username"                                   "unix_timestamp_of_request"                           
+       [33] "unix_timestamp_of_request_utc"                       
+     #+END_EXAMPLE
+     
+     requester related features:
+     * reddit user account age
+     * karma points (which define a notion of status in the Reddit
+       community)
+     * username
+       * BadUser
+       * Iam scammer (scam = golpe, scammed enganado, scammer = golpista)
+	 
+     giver related feature:
+
+     post related feature: (listar as mais facei primeiros)
+     * +length+ ok
+       * ( str_count( "I am not   in       College", "\\S+"))
+	 * df$nword <- str_count(df[,8], "\\S+")
+       * nchar( "I am not College") try both
+	 * >> df$nchar <- nchar(df[,8])
+     * +karma+ (status, reputation) ok
+       * 26: requester_upvotes_minus_downvotes_at_request
+     * +score activity+ (adicionei estas vars) ok but i need to test
+       * 19: "requester_number_of_posts_at_request"
+       * 21: "requester_number_of_posts_on_raop_at_request
+       * "requester_account_age_in_days_at_request"
+     * +activity ratio+ (adicionei estas vars)
+       * 21/19:
+	 "requester_number_of_posts_on_raop_at_request/"requester_number_of_posts_at_request"
+     * +community age+ ok
+     * +First half of month+
+     * Posted in RAOP before
+       * "requester_number_of_posts_on_raop_at_request" > 0
+     * +including image+ ok
+       * df$haslink <- str_detect( df[,8], "https?://") 
+
+     =================================
+   
+     Temporal:
+     * The beginner of the community has higher SR
+     * first fortnight of the month has SR (because many people receive
+       at the end of the month)
+     * day of the week? weekend? !?
+      
+     =================================
+
+*** Notes about the article referece
+    
+    Etendendo narratives
+
+    | Money     | Desire      | Family   | Job          | Student    |
+    |-----------+-------------+----------+--------------+------------|
+    | money     | friend      | husband  | job          | student    |
+    | bill      | party       | wife     | unemployment | university |
+    | bills     | birthday    | family   | employment   | finals     |
+    | rent      | boyfriend   | parent   | hire         | study      |
+    | bank      | girlfriend  | parents  | hired        | studying   |
+    | account   | date        | mother   | fired        | class      |
+    | paycheck  | drinks      | father   | interview    | semester   |
+    | due       | drunk       | mom      | work         | school     |
+    | broke     | wasted      | mum      | paycheck     | roommate   |
+    | bills     | invite      | son      |              | project    |
+    | deposit   | invited     | dad      |              | tuition    |
+    | cash      | celebrate   | daughter |              | dorm       |
+    | dollar    | celebrating |          |              |            |
+    | dollars   | game        |          |              |            |
+    | bucks     | games       |          |              |            |
+    | paid      | movie       |          |              |            |
+    | payed     | beer        |          |              |            |
+    | buy       | crave       |          |              |            |
+    | check     | craving     |          |              |            |
+    | spent     |             |          |              |            |
+    | financial |             |          |              |            |
+    | poor      |             |          |              |            |
+    | loan      |             |          |              |            |
+    | credit    |             |          |              |            |
+    | budget    |             |          |              |            |
+    |-----------+-------------+----------+--------------+------------|
+    | day       |             |          |              |            |
+    | now       |             |          |              |            |
+    | time      |             |          |              |            |
+    | week      |             |          |              |            |
+    | until     |             |          |              |            |
+    | last      |             |          |              |            |
+    | month     |             |          |              |            |
+    | tonight   |             |          |              |            |
+    | today     |             |          |              |            |
+    | next      |             |          |              |            |
+    | night     |             |          |              |            |
+    | when      |             |          |              |            |
+    | tomorrow  |             |          |              |            |
+    | first     |             |          |              |            |
+    | after     |             |          |              |            |
+    | while     |             |          |              |            |
+    | before    |             |          |              |            |
+    | long      |             |          |              |            |
+    | hour      |             |          |              |            |
+    | Friday    |             |          |              |            |
+    | ago       |             |          |              |            |
+    | still     |             |          |              |            |
+    | due       |             |          |              |            |
+    | past      |             |          |              |            |
+    | soon      |             |          |              |            |
+    | curent    |             |          |              |            |
+    | years     |             |          |              |            |
+    | never     |             |          |              |            |
+    | till      |             |          |              |            |
+    | yesterday |             |          |              |            |
+    | morning   |             |          |              |            |
+    | evening   |             |          |              |            |
+    |-----------+-------------+----------+--------------+------------|
+    
+*** Notes about some known results:
+
+     Two factors that had no effect on the success of a request?
+     Politeness and positivity
+     
+     =================================
+     
+*** Notes about news 
+
+     Nice news about the community
+
+     Since r/randomactosofpizza was launched in 2011, the subreddit has
+     been featured on ABC, CNN, and the Huffington Post. Following the
+     bombings at the 2013 Boston Marathon, the Reddit community sent
+     pizzas to the hospitals aiding injured runners and spectators.
+   
+*** Sub Reddit notes
 
     PM: private maessage
     
@@ -223,20 +1102,48 @@
     coisa e vc da a pizza para as pessoas q vc mais gostou. POde ser
     mais de uma.
 
-*** help with R n Python 
+         (Karma is Reddit’s mechanism for rewarding comments and
+     submissions.)
+  
+     scammer list   
+     https://www.reddit.com/r/UniversalScammerList/wiki/banlist
+
+
+     Explanation of upvotes n downvotes n karma
+     https://www.reddit.com/wiki/faq
+     
+*** Help with R n Python 
 
     *Basic Text Mining in R*
     https://rstudio-pubs-static.s3.amazonaws.com/31867_8236987cf0a8444e962ccd2aec46d9c3.htmla
-
+    
     *topic modelling gentle introduction*
     https://eight2late.wordpress.com/2015/09/29/a-gentle-introduction-to-topic-modeling-using-r/
     
+    *Acho que package topicmodels might help*
+    https://cran.r-project.org/web/packages/tidytext/vignettes/tidying_casting.html
+    
     LDA: topic modelling
     Latent Dirichlet Allocation – a math-free introduction
-
-
+    
     https://ropensci.org/blog/2014/04/16/topic-modeling-in-R/
 
+    https://de.dariah.eu/tatom/topic_model_python.html
+
+    =================================
+
+    Cluster analysis
+
+    https://eight2late.wordpress.com/2015/07/22/a-gentle-introduction-to-cluster-analysis-using-r/
+
+    =================================
+    Sentiment analysis
+
+    http://www.r-bloggers.com/sentiment-analysis-on-donald-trump-using-r-and-tableau/
+
+    http://www.r-bloggers.com/intro-to-text-analysis-with-r/
+    
+    =================================
     *Vis interativa legal*
     https://ropensci.org/blog/2014/04/16/topic-modeling-in-R/
 
@@ -247,3 +1154,83 @@
 
     About sentiment n topic modelling
     https://cran.r-project.org/web/packages/tidytext/vignettes/tidying_casting.html
+
+
+    =================================
+
+    Measure of association between y n Xs for categorical, nominal,
+    discrete n numerical
+
+    http://www.ats.ucla.edu/stat/mult_pkg/whatstat/default.htm
+
+    mutual information
+    http://stats.stackexchange.com/questions/29489/how-do-i-study-the-correlation-between-a-continuous-variable-and-a-categorical
+
+    =================================
+
+    Help with logistic regression
+
+    http://florianhartl.com/logistic-regression-geometric-intuition.html
+
+    See things to consider
+    http://www.ats.ucla.edu/stat/r/dae/logit.htm
+
+    Explicacao no excel com formula
+    http://blog.excelmasterseries.com/2014/06/logistic-regression-performed-in-excel.html
+
+    Como avaliar modelos de regressao
+    https://www.xlstat.com/en/solutions/features/logistic-regression-for-binary-response-data-and-polytomous-variables-logit-probit
+
+    * Logit:
+      * p = exp(BX) / (1 + exp(BX))
+      * p/q = exp(BX) (soh fazer aritmetica)
+    * Probit: p = 1/sqrt(2pi) Int BX exp(-x^2/2)dx
+    * Complementary Log-log: p = 1 – exp[-exp(BX)]
+    * Gompertz: p = exp[-exp(BX)]
+      
+    See disscussion for pseudo R squares to help with logistic regression
+    http://www.ats.ucla.edu/stat/mult_pkg/faq/general/Psuedo_RSquareds.htm
+    
+    lasso regression
+    http://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html
+    
+
+    =================================
+
+    xgboost
+
+    Guide
+
+    R
+    http://www.analyticsvidhya.com/blog/2016/01/xgboost-algorithm-easy-steps/
+    
+    corrplot, othe interesting to check
+    https://rpubs.com/flyingdisc/practical-machine-learning-xgboost
+
+    Python (dicas de como tunar)
+    http://www.analyticsvidhya.com/blog/2016/03/complete-guide-parameter-tuning-xgboost-with-codes-python/
+    
+    tutorial/dicas para rodar aws
+    http://xgboost.readthedocs.io/en/latest/tutorials/aws_yarn.html
+
+    Parralelized tree essemble
+    http://zhanpengfang.github.io/418home.html
+    
+
+    Gradient boosting tutorial
+    http://xgboost.readthedocs.io/en/latest/model.html
+
+    Distribute XGBoost on AWS
+    http://xgboost.readthedocs.io/en/latest/tutorials/aws_yarn.html
+
+*** Visualization notes
+
+    *3 reasons you should use word clouds to present your text data*
+
+    * Tag cloud is a powerful method for text mining and, it add
+      simplicity and clarity. The most used keywords stand out better
+      in a word cloud
+    * Word clouds are a potent communication tool. They are easy to
+      understand, to be shared and are impactful
+    * Word clouds are visually engaging than a table data
+
