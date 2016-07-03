@@ -10,9 +10,8 @@
 ##* ****************************************************************
 
 
-library(stringr)
-library(jsonlite)
-library(feather)
+library(jsonlite, quietly = TRUE )
+library(feather, quietly = TRUE )
 
 source("./utils/data.R")
 source("./utils/utils.R")
