@@ -645,12 +645,15 @@ Quantos
 
      print(p)
    #+END_SRC
-
    
 ** Model diag balancemaento [2016-07-03 Sun]
 
 
 #+BEGIN_SRC R
+  ##library(dplyr, quietly = TRUE )
+  ##library(tidyr, quietly = TRUE )
+  library(xgboost, quietly = TRUE )
+
   TransformVariable <- function(x, max_x, min_x){    
       return( (x - median(x))/(max_x - min_x) )
   }
@@ -681,11 +684,11 @@ Quantos
   ## Rebalance class
   dev.data <- raop.target %>%
       dplyr::filter( requester_received_pizza == TRUE) %>%
-      dplyr::select( one_of(cols.pred))
+      dplyr::select( dplyr::one_of(cols.pred))
 
   samp.data <- raop.target %>%
       dplyr::filter( requester_received_pizza == FALSE) %>%
-      dplyr::select( one_of(cols.pred)) %>%
+      dplyr::select( dplyr::one_of(cols.pred)) %>%
       dplyr::sample_n(nrow(dev.data),replace=FALSE)
 
 
@@ -693,13 +696,11 @@ Quantos
 
 
   ## Tranforms vars
-
   cols.to.transform <- c("requester_account_age_in_days_at_request",
                          "requester_number_of_posts_at_request",
                          "requester_upvotes_minus_downvotes_at_request",
                          "nword", 
                          "post.sent")
-
 
   for( cc in cols.to.transform){
       print(cc)
@@ -716,9 +717,11 @@ Quantos
   train.data <- dev.data[r,]
   val.data   <- dev.data[-r,]
 
-  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]), label=as.matrix(train.data[,'requester_received_pizza']))
+  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]),
+                           label=as.matrix(train.data[,'requester_received_pizza']))
 
-  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]), label=as.matrix(val.data[,'requester_received_pizza']))
+  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]),
+                         label=as.matrix(val.data[,'requester_received_pizza']))
 
   watchlist <- list(train=xgb.train, val=xgb.val)
   xgb.model <- xgb.train(data = xgb.train, nthread = 3, nround = 150,
@@ -730,7 +733,7 @@ Quantos
   train.matrix.names = dimnames(train.matrix)[[2]]
 
   importance_matrix <- xgb.importance(train.matrix.names,
-                                        model = xgb.model)
+                                      model = xgb.model)
 
   p <- xgb.plot.importance(importance_matrix)
   print(p)
@@ -739,6 +742,8 @@ Quantos
 testandos os narratives scores
 
 #+BEGIN_SRC R
+  library(xgboost, quietly = TRUE )
+
   TransformVariable <- function(x, max_x, min_x){    
       return( (x - median(x))/(max_x - min_x) )
   }
@@ -771,11 +776,11 @@ testandos os narratives scores
   ## Rebalance class
   dev.data <- raop.target %>%
       dplyr::filter( requester_received_pizza == TRUE) %>%
-      dplyr::select( one_of(cols.pred))
+      dplyr::select( dplyr::one_of(cols.pred))
 
   samp.data <- raop.target %>%
       dplyr::filter( requester_received_pizza == FALSE) %>%
-      dplyr::select( one_of(cols.pred)) %>%
+      dplyr::select( dplyr::one_of(cols.pred)) %>%
       dplyr::sample_n(nrow(dev.data),replace=FALSE)
 
   dev.data <- rbind(dev.data,samp.data)
@@ -802,9 +807,11 @@ testandos os narratives scores
   train.data <- dev.data[r,]
   val.data   <- dev.data[-r,]
 
-  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]), label=as.matrix(train.data[,'requester_received_pizza']))
+  xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]),
+                           label=as.matrix(train.data[,'requester_received_pizza']))
 
-  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]), label=as.matrix(val.data[,'requester_received_pizza']))
+  xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]),
+                         label=as.matrix(val.data[,'requester_received_pizza']))
 
   watchlist <- list(train=xgb.train, val=xgb.val)
   xgb.model <- xgb.train(data = xgb.train, nthread = 3, nround = 40,
@@ -854,7 +861,315 @@ testandos os narratives scores
             data=train.data)
 
   summary(m7)
+
+  m8 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request +
+                post.sent +
+                money.score +
+                job.score +
+                student.score +
+                has.link +
+                posted.raop.before,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m8)
+
+  m9 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request +
+                post.sent +
+                money.score +
+                job.score +
+                has.link +
+                posted.raop.before,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m9)
+
+
+  m10 <- glm(requester_received_pizza ~ nword +
+                requester_account_age_in_days_at_request +
+                requester_upvotes_minus_downvotes_at_request +
+                post.sent +
+                money.score +
+                has.link +
+                first.half.of.month+
+                posted.raop.before,
+            family=binomial(link='logit'),
+            data=train.data)
+
+  summary(m10)
+
+
+
 #+END_SRC
+
+
+#+BEGIN_SRC R
+  y.train <- unlist(train.data[,"requester_received_pizza"])
+  pred.train    <- predict(m10, type = 'response')
+
+  y.val <- unlist(val.data[,"requester_received_pizza"])
+  pred.val    <- predict(m10,val.data, type = 'response')
+
+  ## score
+  z <- log(pred/(1.0-pred))
+
+  #confusion matrix
+  table(y.train, pred > 0.5)
+
+  library(caret,quietly = TRUE )
+  confusionMatrix(pred.train > 0.5, y.train)
+  confusionMatrix(pred.val > 0.5 , y.val)
+
+
+  # ROCR Curve
+  library(ROCR)
+  ROCRpred <- prediction(pred, y.train)
+  ROCRperf <- performance(ROCRpred, 'tpr','fpr')
+
+  plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
+  abline(a = 0.0, b=1.0,col = "lightgray", lty = 2)
+
+
+  data.view <- train.data
+  data.view$requester_received_pizza <- as.numeric(data.view$requester_received_pizza)
+  data.view$z = z
+
+  p <- ggplot(data.view, aes(x=z, y=requester_received_pizza)) + geom_point() + 
+      stat_smooth(method="glm", family="binomial",s=FALSE)
+
+
+  p <- ggplot(data.view, aes(x=z, y=requester_received_pizza)) + geom_point() + 
+      geom_smooth(method = "glm", method.args = list(family = "binomial")
+
+  print(p)
+
+#+END_SRC
+
+
+**  Model adjust [2016-07-03 Sun]
+
+   Vou apenas tratar karma. removendo outliers
+   
+#+BEGIN_SRC R
+   library(xgboost, quietly = TRUE )
+
+   TransformVariable <- function(x, max_x, min_x){    
+       return( (x - median(x))/(max_x - min_x) )
+   }
+
+   TransformVariableToDecile <- function(x){
+
+       bp <- boxplot(x)
+       bp.max <- bp$stats[5]
+       bp.min <- bp$stats[1]
+       delta <- (bp.max - bp.min)/10
+
+       breaks <- seq(from = bp.min, to = bp.max, by=delta)
+
+       xc <- cut(x, breaks = breaks)
+       xcn <- as.numeric(xcut)
+
+       return(xcn)
+   }
+
+   cols.pred <- c("requester_received_pizza",
+                  "requester_account_age_in_days_at_request",
+                  "requester_number_of_posts_at_request",
+                  "requester_upvotes_minus_downvotes_at_request",
+                  "nword", "has.link",
+                  "first.half.of.month",
+                  "posted.raop.before", "post.sent","is.weekend",
+                  "desire.score","family.score","money.score",
+                  "job.score", "student.score")
+
+   ## Rebalance class
+   dev.data <- raop.target %>%
+       dplyr::filter( requester_received_pizza == TRUE) %>%
+       dplyr::filter( requester_upvotes_minus_downvotes_at_request < 2889) %>%
+       dplyr::filter( nword < 200) %>%
+       dplyr::filter( requester_account_age_in_days_at_request < 965) %>%
+       dplyr::filter( requester_number_of_posts_at_request < 60) %>%
+       dplyr::select( dplyr::one_of(cols.pred))
+
+   samp.data <- raop.target %>%
+       dplyr::filter( requester_received_pizza == FALSE) %>%
+       dplyr::filter( requester_upvotes_minus_downvotes_at_request < 2889) %>%
+       dplyr::filter( nword < 200) %>%
+       dplyr::filter( requester_account_age_in_days_at_request < 965) %>%
+       dplyr::filter( requester_number_of_posts_at_request < 60) %>%
+       dplyr::select( dplyr::one_of(cols.pred)) %>%
+       dplyr::sample_n(nrow(dev.data),replace=FALSE)
+
+   dev.data <- rbind(dev.data,samp.data)
+
+   ## Tranforms vars
+   cols.to.transform <- c("requester_account_age_in_days_at_request",
+                          "requester_number_of_posts_at_request",
+                          "requester_upvotes_minus_downvotes_at_request",
+                          "nword", 
+                          "post.sent")
+
+   for( cc in cols.to.transform){
+       print(cc)
+       x <- unlist((dev.data[, cc]))
+       dev.data[, cc] <- TransformVariable( x, max(x), min(x) )
+   }
+
+   train.size <- 1460
+   val.size   <- nrow(dev.data) - train.size
+
+   set.seed(13)
+   r <- sample(nrow(dev.data),train.size)
+
+   train.data <- dev.data[r,]
+   val.data   <- dev.data[-r,]
+
+   xgb.train <- xgb.DMatrix(data = as.matrix(train.data[,2:ncol(train.data)]),
+                            label=as.matrix(train.data[,'requester_received_pizza']))
+
+   xgb.val <- xgb.DMatrix(data = as.matrix(val.data[,2:ncol(val.data)]),
+                          label=as.matrix(val.data[,'requester_received_pizza']))
+
+   watchlist <- list(train=xgb.train, val=xgb.val)
+   xgb.model <- xgb.train(data = xgb.train, nthread = 3, nround = 30,
+                          watchlist=watchlist,
+                          objective = "binary:logistic", verbose=0)
+
+
+   train.matrix <- as.matrix(train.data[,names(train.data) != 'requester_received_pizza'])
+   train.matrix.names = dimnames(train.matrix)[[2]]
+
+   importance_matrix <- xgb.importance(train.matrix.names,
+                                       model = xgb.model)
+
+   p <- xgb.plot.importance(importance_matrix)
+   print(p)
+
+
+   ##=================================
+
+   m11 <- glm(requester_received_pizza ~
+                  requester_upvotes_minus_downvotes_at_request +
+                  nword +
+                  requester_account_age_in_days_at_request +
+                  money.score +
+                  post.sent +
+                  requester_number_of_posts_at_request +
+                  family.score +
+                  job.score +
+                  student.score +
+                  has.link +
+                  posted.raop.before,
+              family=binomial(link='logit'),
+              data=train.data)
+
+   summary(m11)
+
+   m12 <- glm(requester_received_pizza ~
+                  requester_upvotes_minus_downvotes_at_request +
+                  nword +
+                  requester_account_age_in_days_at_request +
+                  money.score +
+                  post.sent +
+                  family.score +
+                  job.score +
+                  student.score +
+                  has.link +
+                  posted.raop.before,
+              family=binomial(link='logit'),
+              data=train.data)
+
+   summary(m12)
+
+   m13 <- glm(requester_received_pizza ~
+                  requester_upvotes_minus_downvotes_at_request +
+                  nword +
+                  money.score +
+                  post.sent +
+                  has.link +
+                  first.half.of.month+
+                  posted.raop.before,
+              family=binomial(link='logit'),
+              data=train.data)
+
+   summary(m13)
+
+   m14 <- glm(requester_received_pizza ~
+                  requester_upvotes_minus_downvotes_at_request +
+                  nword +
+                  requester_account_age_in_days_at_request +
+                  money.score +
+                  post.sent +
+                  has.link +
+                  first.half.of.month+
+                  posted.raop.before,
+              family=binomial(link='logit'),
+              data=train.data)
+
+   summary(m14)
+
+   m14.1 <- glm(requester_received_pizza ~
+                  requester_upvotes_minus_downvotes_at_request +
+                  nword +
+                  money.score +
+                  post.sent +
+                  has.link +
+                  first.half.of.month+
+                  posted.raop.before,
+              family=binomial(link='logit'),
+              data=train.data)
+
+   summary(m14.1)
+
+   m14.2 <- glm(requester_received_pizza ~
+                  nword +
+                  requester_account_age_in_days_at_request +
+                  money.score +
+                  post.sent +
+                  has.link +
+                  first.half.of.month+
+                  posted.raop.before,
+              family=binomial(link='logit'),
+              data=train.data)
+
+   summary(m14.2)
+
+
+#+END_SRC
+
+#+BEGIN_SRC R
+  y.train <- unlist(train.data[,"requester_received_pizza"])
+  pred.train    <- predict(m14, type = 'response')
+
+  y.val <- unlist(val.data[,"requester_received_pizza"])
+  pred.val    <- predict(m14,val.data, type = 'response')
+
+  ## score
+  z <- log(pred/(1.0-pred))
+
+  #confusion matrix
+  table(y.train, pred.train > 0.5)
+  table(y.val, pred.val > 0.5)
+
+  library(caret,quietly = TRUE )
+  confusionMatrix(pred.train > 0.5, y.train)
+  confusionMatrix(pred.val > 0.5 , y.val)
+
+  # ROCR Curve
+  library(ROCR)
+  ROCRpred <- prediction(pred.val, y.val)
+  ROCRperf <- performance(ROCRpred, 'tpr','fpr')
+  auc.perf <- performance(ROCRpred, measure = "auc")
+  auc.perf@y.values
+
+  plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
+  abline(a = 0.0, b=1.0,col = "lightgray", lty = 2)
+
+#+END_SRC
+
 
 ** Links
 
