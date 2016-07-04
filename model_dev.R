@@ -42,9 +42,7 @@ cols.num <- c("requester_received_pizza",
               "desire.score", "family.score", "money.score", 
               "job.score", "student.score")
 
-
 data.exp <- DataExplorer(train.data[,cols.num],resp.var)
-
 
 cat("Featuring Selection... \n")
 param.list <- list("objective" = "binary:logistic",
@@ -67,11 +65,11 @@ xgb.exp <- XGBoostExplorer(train.data,
                            param.list)
 
 xgb.exp$PlotRelativeImportance()
+
+## FIXME: PLot is considering RMSE instead of error: #wrong/(total)
 xgb.exp$GetXGBoostDashBoard()
 
-
 cat('Model building...\n')
-
 m14 <- RAoPModel(train.data, val.data, resp.var)
 
 cat('Report model summary...\n')

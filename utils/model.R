@@ -16,7 +16,8 @@ RAoPModel <- function(train.data, val.data, resp.var){
     
     predictors.name <- names(train.data)
     predictors.name <- predictors.name[predictors.name != resp.var]
-    
+
+    ## TODO Refator it: Pass formula as parameter
     m14 <- glm(requester_received_pizza ~
                requester_upvotes_minus_downvotes_at_request +
                nword +

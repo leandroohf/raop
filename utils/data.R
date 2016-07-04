@@ -84,7 +84,6 @@ DesignData <- function(raop.target){
                    "posted.raop.before", "post.sent","is.weekend",
                    "desire.score","family.score","money.score",
                    "job.score", "student.score")
-
     
     cat("Selecting model candidates vars ... \n")
     dev.data <- raop.target %>%
@@ -93,10 +92,10 @@ DesignData <- function(raop.target){
     dev.data <- BalanceDataClass(dev.data)
 
     ## XXX Improve this code. I need to pass the max n min used in
-    ## train phase for new data. So I need to pass thereference !?
-    ## This is a temp solution. I ma wasting memory and performance
+    ## train phase for new data. So I need to pass a reference !?
+    ## This is a temp solution. I am wasting memory and performance
     ## but reducing implementation cost
-    dev.data <- TransformNumericalVars(dev.data,dev.data)
+    dev.data   <- TransformNumericalVars(dev.data,dev.data)
     split.list <- SplitData(dev.data) ## <= list(train.data, val.data)
 
     return(split.list)
@@ -118,7 +117,6 @@ BalanceDataClass <- function(raop.target){
         dplyr::filter( nword < nword.thr) %>%
         dplyr::filter( requester_account_age_in_days_at_request < age.thr) %>%
         dplyr::filter( requester_number_of_posts_at_request < npost_at_request)## %>%
-        ##dplyr::select( dplyr::one_of(cols.pred))
 
     samp.data <- raop.target %>%
         dplyr::filter( requester_received_pizza == FALSE) %>%
@@ -126,7 +124,6 @@ BalanceDataClass <- function(raop.target){
         dplyr::filter( nword < nword.thr) %>%
         dplyr::filter( requester_account_age_in_days_at_request < age.thr) %>%
         dplyr::filter( requester_number_of_posts_at_request < npost_at_request) %>%
-        ##dplyr::select( dplyr::one_of(cols.pred)) %>%
         dplyr::sample_n(nrow(dev.data),replace=FALSE)
 
     dev.data <- rbind(dev.data,samp.data)
@@ -136,6 +133,7 @@ BalanceDataClass <- function(raop.target){
 
 TransformNumericalVars <- function(dev.data,train.data){
 
+    ## TODO Pass cols to transform as args
     ## Tranforms vars
     cat("Mapping numerical columns to 0 - 1 range ... \n")
     cols.to.transform <- c("requester_account_age_in_days_at_request",
@@ -143,7 +141,8 @@ TransformNumericalVars <- function(dev.data,train.data){
                            "requester_upvotes_minus_downvotes_at_request",
                            "nword", 
                            "post.sent")
-    
+
+    ## XXX If start to become slow, optimize it
     for( cc in cols.to.transform){
         print(cc)
         x <- unlist((dev.data[, cc]))
