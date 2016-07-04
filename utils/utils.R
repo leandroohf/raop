@@ -117,7 +117,9 @@ TranformVarToMedianStandatVar <- function(x){
 }
 
 TransformVariable <- function(x, max_x, min_x){    
-    return( (x - median(x))/(max_x - min_x) )
+
+    return( x/(max_x - min_x))
+    ##return( (x - median(x))/(max_x - min_x) )
 }
 
 TransformVariableToDecile <- function(x){
