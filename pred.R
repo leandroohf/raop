@@ -22,28 +22,31 @@ newdata.df   <- fromJSON( newdata.file, flatten=TRUE)
 pos.words <- readLines("./dict/positive-words.txt")
 neg.words <- readLines("./dict/negative-words.txt")
 
-
 cat('Loading model...\n')
 load(file='./models/m14.rda')
-train.data <- read_feather("./data/stage/train_data.feather" )
+split.list <- m14$GetData()
+train.data <- split.list[[1]]
 
 newdata.df <- BuildNewFeatures(newdata.df, pos.words, neg.words)
 
 ## TODO Read from settings.json file
-cols.pred <- c("requester_account_age_in_days_at_request",
-               "requester_number_of_posts_at_request",
-               "requester_upvotes_minus_downvotes_at_request",
-               "nword", "has.link",
-               "first.half.of.month",
-               "posted.raop.before", "post.sent","is.weekend",
-               "desire.score","family.score","money.score",
-               "job.score", "student.score")
+## FIXME t is NOT DRY
+## cols.pred <- c("requester_account_age_in_days_at_request",
+##                "requester_number_of_posts_at_request",
+##                "requester_upvotes_minus_downvotes_at_request",
+##                "nword", "has.link",
+##                "first.half.of.month",
+##                "posted.raop.before", "post.sent","is.weekend",
+##                "desire.score","family.score","money.score",
+##                "job.score", "student.score")
     
-new.data <- newdata.df[,cols.pred]
+new.data <- newdata.df[,m14$GetPredictorsName()]
 new.data <- TransformNumericalVars(new.data,train.data)
 
-pred <- predict(m14,new.data, type = 'response')
+cat('Make predition...\n')
+pred <- m14$GetPrediction(new.data)
+print(pred)
 
+cat('Saving predition...\n')
 pred.df <- cbind(new.data,pred)
-
 write_feather(pred.df, paste0("data/stage/pred_",lubridate::today(),".feather"))

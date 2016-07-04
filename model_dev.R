@@ -15,6 +15,7 @@ source("./utils/data.R")
 source("./utils/utils.R")
 source("./utils/features_selection.R")
 source("./utils/report.R")
+source("./utils/model.R")
 
 raop.target <- read_feather("./data/stage/raop_target.feather" )
 
@@ -70,20 +71,11 @@ xgb.exp$GetXGBoostDashBoard()
 
 
 cat('Model building...\n')
-m14 <- glm(requester_received_pizza ~
-               requester_upvotes_minus_downvotes_at_request +
-               nword +
-               requester_account_age_in_days_at_request +
-               money.score +
-               post.sent +
-               has.link +
-               first.half.of.month+
-               posted.raop.before,
-           family=binomial(link='logit'),
-           data=train.data)
+
+m14 <- RAoPModel(train.data, val.data, resp.var)
 
 cat('Report model summary...\n')
-BuildModelReport(m14,resp.var,train.data,val.data)
+BuildModelReport(m14$GetGlmObject(),resp.var,train.data,val.data)
 
 cat('Saving model...\n')
 save(m14,file='./models/m14.rda')
