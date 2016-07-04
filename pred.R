@@ -28,17 +28,6 @@ split.list <- m14$GetData()
 train.data <- split.list[[1]]
 
 newdata.df <- BuildNewFeatures(newdata.df, pos.words, neg.words)
-
-## TODO Read from settings.json file
-## FIXME t is NOT DRY
-## cols.pred <- c("requester_account_age_in_days_at_request",
-##                "requester_number_of_posts_at_request",
-##                "requester_upvotes_minus_downvotes_at_request",
-##                "nword", "has.link",
-##                "first.half.of.month",
-##                "posted.raop.before", "post.sent","is.weekend",
-##                "desire.score","family.score","money.score",
-##                "job.score", "student.score")
     
 new.data <- newdata.df[,m14$GetPredictorsName()]
 new.data <- TransformNumericalVars(new.data,train.data)
