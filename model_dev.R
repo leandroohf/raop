@@ -65,7 +65,6 @@ xgb.exp <- XGBoostExplorer(train.data,
                            number.of.models,
                            param.list)
 
-
 xgb.exp$PlotRelativeImportance()
 xgb.exp$GetXGBoostDashBoard()
 
@@ -85,3 +84,9 @@ m14 <- glm(requester_received_pizza ~
 
 cat('Report model summary...\n')
 BuildModelReport(m14,resp.var,train.data,val.data)
+
+cat('Saving model...\n')
+save(m14,file='./models/m14.rda')
+
+write_feather(train.data, "data/stage/train_data.feather")
+write_feather(val.data, "data/stage/train_data.feather")

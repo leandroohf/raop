@@ -355,9 +355,10 @@ XGBoostExplorer <- function(train.db, test.db, response.var, number.of.models,pa
     max.nround <- 100
     
     train.label  <- as.matrix(train.db[,response.var])
+    
     train.matrix <- as.matrix(train.db[,names(train.db) != response.var])
     xgb.train    <- xgb.DMatrix(data = train.matrix , label=train.label)
-        
+    
     test.label  <- as.matrix(test.db[,response.var])
     test.matrix <- as.matrix(test.db[, names(test.db) != response.var])
     xgb.test    <- xgb.DMatrix(data = test.matrix, label=test.label)
