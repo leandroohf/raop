@@ -23,7 +23,7 @@ data.split.list <- DesignData(raop.target)
 train.data <- data.split.list[[1]]
 val.data   <- data.split.list[[2]]
 
-## There are 1 Nan in each narrative score 
+## There is 1 Nan in each narrative score 
 train.data <- na.omit(train.data)
 val.data   <- na.omit(val.data)
 
@@ -43,6 +43,7 @@ cols.num <- c("requester_received_pizza",
               "job.score", "student.score")
 
 data.exp <- DataExplorer(train.data[,cols.num],resp.var)
+data.exp$GetCorrDashBoard()
 
 cat("Featuring Selection... \n")
 param.list <- list("objective" = "binary:logistic",
@@ -55,7 +56,6 @@ param.list <- list("objective" = "binary:logistic",
                    "booster" = "gbtree",
                    "max_depth" = 9,
                    "eval_metric" = "error")
-
 
 number.of.models <- 15
 xgb.exp <- XGBoostExplorer(train.data,
