@@ -24,7 +24,6 @@ cols.num <- c("requester_received_pizza",
               "requester_username","nword",
               "post.sent")
 
-
 cat("Summaring vars...\n")
 cat(" numeric: \n")
 print(summary(raop.target[,cols.num]))
