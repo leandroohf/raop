@@ -30,7 +30,7 @@ BuildDataTarget <- function(raop.df, pos.words, neg.words){
 BuildNewFeatures <- function(raop.df, pos.words, neg.words){
 
     ## TODO Add stopifnot clause to check data interface
-    ## (Defensice programming)
+    ## (Defensive programming)
     cols.check <- c("in_test_set","request_id","request_text",
                     "requester_account_age_in_days_at_request",
                     "requester_days_since_first_post_on_raop_at_request",
@@ -60,7 +60,7 @@ BuildNewFeatures <- function(raop.df, pos.words, neg.words){
     raop.df$posted.raop.before  <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
 
     cat("Text engineering...\n")
-    raop.corpus <- GetCleanedCorpus(raop.df)
+    raop.corpus       <- GetCleanedCorpus(raop.df)
     raop.df$post.sent <- GetSentimentScoreFromCorpus(raop.corpus, pos.words, neg.words)
 
     raop.df$desire.score  <- GetNarrativesScoreFromCorpus(raop.corpus, desire.words)

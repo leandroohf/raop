@@ -78,5 +78,5 @@ BuildModelReport(m14$GetGlmObject(),resp.var,train.data,val.data)
 cat('Saving model...\n')
 save(m14,file='./models/m14.rda')
 
-write_feather(train.data, "data/stage/train_data.feather")
-write_feather(val.data, "data/stage/train_data.feather")
+## write_feather(train.data, "data/stage/train_data.feather")
+## write_feather(val.data, "data/stage/val_data.feather")
