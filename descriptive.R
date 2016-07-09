@@ -1,3 +1,14 @@
+##* ****************************************************************
+##  Programer[s]: Leandro Fernandes
+##  Company/Institution:
+##  email: leandroohf@gmail.com
+##  Date: June 18, 2016
+##
+##  The author believes that share code and knowledge is awesome.
+##  Feel free to share and modify this piece of code. But don't be
+##  impolite and remember to cite the author and give him his credits.
+##* ****************************************************************
+
 library(feather, quietly = TRUE )
 library(ggplot2, quietly = TRUE )
 library(wordcloud, quietly = TRUE )
@@ -80,6 +91,3 @@ p.right <- ggplot(nopizza.data.view, aes(x=word, y=freq)) +
     coord_flip() + ggtitle("no pizza")
 
 grid.arrange (p.left, p.right, ncol=2)
-
-## =================================
-## requester des
