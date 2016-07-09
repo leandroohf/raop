@@ -24,4 +24,4 @@ neg.words <- readLines("./dict/negative-words.txt")
 
 raop.target <- BuildDataTarget(raop.df, pos.words, neg.words)
 
-write_feather(raop.target, "data/stage/raop_target.feather")
+write_feather(raop&.target, "data/stage/raop_target.feather")
