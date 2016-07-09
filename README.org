@@ -4,7 +4,6 @@
   * Explain waht is RAoP
   * Discuss a little about article reference
   * Discuss what we decided to do n why
-
     
 * Descriptive
 
