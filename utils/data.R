@@ -1,12 +1,13 @@
 library(stringr, quietly = TRUE )
 library(stringi, quietly = TRUE )
+library(assertthat, quietly = TRUE )
 
-BuildDataTarget <- function(raop.df, pos.words, neg.words){
+BuildDataTarget <- function(raop.df, sent.dict, narrative.dict){
 
     ## Defensive programming
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
 
-    raop.df <- BuildNewFeatures(raop.df, pos.words, neg.words)
+    raop.df <- BuildNewFeatures(raop.df, sent.dict, narrative.dict)
     
     cat("Selecting target vars... \n")
     cols.target <- c("in_test_set","request_id","request_text",
@@ -21,15 +22,14 @@ BuildDataTarget <- function(raop.df, pos.words, neg.words){
                      "posted.raop.before", "post.sent", "is.weekend",
                      "desire.score","family.score","job.score","money.score",
                      "student.score")
-    
+
     raop.target <- raop.df[,cols.target]
 
     return(raop.target)
 }
 
-BuildNewFeatures <- function(raop.df, pos.words, neg.words){
-
-    ## TODO Add stopifnot clause to check data interface
+BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
+    
     ## (Defensive programming)
     cols.check <- c("in_test_set","request_id","request_text",
                     "requester_account_age_in_days_at_request",
@@ -41,19 +41,13 @@ BuildNewFeatures <- function(raop.df, pos.words, neg.words){
     
     stopifnot( cols.check %in% names(raop.df) )
     
-    ## TODO Refactor this code
-    desire.words  <- readLines("./dict/desire.txt")
-    family.words  <- readLines("./dict/family.txt")
-    job.words     <- readLines("./dict/job.txt")
-    money.words   <- readLines("./dict/money.txt")
-    student.words <- readLines("./dict/student.txt")
-
     cat("Features engineering...\n")
     raop.df$nword          <- str_count(raop.df[,"request_text"], "\\S+")
     raop.df$has.link       <- str_detect( raop.df[,"request_text"], "https?://")
 
     raop.df$request.date   <- as.POSIXct(raop.df[,"unix_timestamp_of_request"],
                                          origin="1970-01-01", tz = "UTC")
+    
     raop.df$first.half.of.month <- (lubridate::day(raop.df$request.date) < 16)
     raop.df$is.weekend          <- (lubridate::wday(raop.df$request.date) %in%  c(1,6,7))
 
@@ -61,13 +55,27 @@ BuildNewFeatures <- function(raop.df, pos.words, neg.words){
 
     cat("Text engineering...\n")
     raop.corpus       <- GetCleanedCorpus(raop.df)
-    raop.df$post.sent <- GetSentimentScoreFromCorpus(raop.corpus, pos.words, neg.words)
 
-    raop.df$desire.score  <- GetNarrativesScoreFromCorpus(raop.corpus, desire.words)
-    raop.df$family.score  <- GetNarrativesScoreFromCorpus(raop.corpus, family.words)
-    raop.df$job.score     <- GetNarrativesScoreFromCorpus(raop.corpus, job.words)
-    raop.df$money.score   <- GetNarrativesScoreFromCorpus(raop.corpus, money.words)
-    raop.df$student.score <- GetNarrativesScoreFromCorpus(raop.corpus, student.words)
+    ## Sentiment score
+    raop.df$post.sent <- GetSentimentScoreFromCorpus(raop.corpus,
+                                                     sent.dict$pos,
+                                                     sent.dict$neg)
+    
+    ## Narratives scores
+    raop.df$desire.score  <- GetNarrativesScoreFromCorpus(raop.corpus,
+                                                          narrative.dict$desire)
+
+    raop.df$family.score  <- GetNarrativesScoreFromCorpus(raop.corpus,
+                                                          narrative.dict$family)
+    
+    raop.df$job.score     <- GetNarrativesScoreFromCorpus(raop.corpus,
+                                                          narrative.dict$job)
+
+    raop.df$money.score   <- GetNarrativesScoreFromCorpus(raop.corpus,
+                                                          narrative.dict$money)
+
+    raop.df$student.score <- GetNarrativesScoreFromCorpus(raop.corpus,
+                                                          narrative.dict$student)
 
     return(raop.df)
 }
@@ -153,7 +161,6 @@ TransformNumericalVars <- function(dev.data,train.data){
     return(dev.data)
 }
 
-
 SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
 
     cat("Spliting data in train n test ... \n")
@@ -167,4 +174,35 @@ SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
     val.data   <- dev.data[-r,]
 
     return(list(train.data,val.data))
+}
+
+LoadDcitionariesFromSetings <- function(settings){
+    
+    reqired.cols <- c("pos_dict_path","neg_dict_path",
+                      "desire_dict_path",
+                      "family_dict_path",
+                      "job_dict_path",
+                      "money_dict_path",
+                      "student_dict_path")
+    
+    ##assert_that( is.flag (reqired.cols  %in% names(settings)))
+    ## TODO use assert_that
+    stopifnot( reqired.cols  %in% names(settings))
+    
+    pos <- readLines(settings$pos_dict_path)
+    neg <- readLines(settings$neg_dict_path)
+    sent.dict <- list(pos,neg)
+    names(sent.dict) <- c("pos","neg")
+    
+    desire  <- readLines(settings$desire_dict_path)
+    family  <- readLines(settings$family_dict_path)
+    job     <- readLines(settings$job_dict_path)
+    money   <- readLines(settings$money_dict_path)
+    student <- readLines(settings$student_dict_path)
+
+    narrative.dict <- list(desire,family,job,money,student)
+    names(narrative.dict) <- c("desire","family","job","money",
+                               "student")
+    
+    return(list(sent.dict, narrative.dict))
 }
