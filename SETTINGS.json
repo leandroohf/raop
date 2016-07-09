@@ -1,0 +1,12 @@
+{
+    "data_raw_path": "./data/raw/pizza_request_dataset.json",
+    "new_data_raw_path": "./data/raw/new_request_data.json",
+    "pos_dict_path": "./dict/positive-words.txt",
+    "pos_dict_path": "./dict/positive-words.txt",
+    "neg_dict_path": "./dict/negative-words.txt",
+    "desire_dict_path": "./dict/desire.txt",
+    "family_dict_path": "./dict/family.txt",
+    "job_dict_path": "./dict/job.txt",
+    "money_dict_path": "./dict/money.txt",
+    "student_dict_path": "./dict/student.txt"
+}
