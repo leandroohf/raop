@@ -50,12 +50,13 @@ data.view <- raop.target[,cols.num]
 names(data.view) <- paste0("x",as.character(seq(1:ncol(data.view))))
 data.exp <- DataExplorer(data.view ,"x1")
 data.exp$GetCorrDashBoard()
+data.exp$GetHistogramDashBoard()
+
+
 
 ## Text analysis
 pizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == TRUE)
-##pizza.df  <- raop.df[raop.df["requester_received_pizza"] == TRUE,]
 
-##nopizza.df <- raop.df[raop.df["requester_received_pizza"] == FALSE,]
 nopizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == FALSE)
 
 pizza.corpus   <- GetCleanedCorpus(pizza.df)
@@ -105,11 +106,3 @@ p.right <- ggplot(nopizza.data.view, aes(x=word, y=freq)) +
     coord_flip() + ggtitle("no pizza")
 
 grid.arrange (p.left, p.right, ncol=2)
-
-cols.num <- c("requester_received_pizza",
-              "requester_account_age_in_days_at_request", 
-              "requester_number_of_posts_at_request",
-              "requester_upvotes_minus_downvotes_at_request", 
-              "nword",
-              "desire.score", "family.score", "money.score", 
-              "job.score", "student.score")
