@@ -42,7 +42,7 @@ BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
     stopifnot( cols.check %in% names(raop.df) )
     
     cat("Features engineering...\n")
-    raop.df$nword          <- str_count(raop.df[,"request_text"], "\\S+")
+    raop.df$nword <- str_count(raop.df[,"request_text"], "\\S+")
     raop.df$has.link       <- str_detect( raop.df[,"request_text"], "https?://")
 
     raop.df$request.date   <- as.POSIXct(raop.df[,"unix_timestamp_of_request"],
@@ -64,16 +64,16 @@ BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
     ## Narratives scores
     raop.df$desire.score  <- GetNarrativesScoreFromCorpus(raop.corpus,
                                                           narrative.dict$desire)
-
+    
     raop.df$family.score  <- GetNarrativesScoreFromCorpus(raop.corpus,
                                                           narrative.dict$family)
     
     raop.df$job.score     <- GetNarrativesScoreFromCorpus(raop.corpus,
                                                           narrative.dict$job)
-
+    
     raop.df$money.score   <- GetNarrativesScoreFromCorpus(raop.corpus,
                                                           narrative.dict$money)
-
+    
     raop.df$student.score <- GetNarrativesScoreFromCorpus(raop.corpus,
                                                           narrative.dict$student)
 

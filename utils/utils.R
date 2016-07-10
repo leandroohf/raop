@@ -10,10 +10,12 @@
 ##* ****************************************************************
 
 library(tm, quietly = TRUE )
+library(assertthat, quietly = TRUE )
 
-GetCleanedCorpus <- function(raop.df){
+## Text tools
+GetCleanedCorpus <- function(posts.text){
 
-    raop.corpus <- Corpus(VectorSource(raop.df[,8]))
+    raop.corpus <- Corpus(VectorSource(posts.text))
     raop.corpus <- tm_map( raop.corpus, removeNumbers)
     raop.corpus <- tm_map(raop.corpus, tolower)
     ## First remove stopword and then punctuation
@@ -24,7 +26,7 @@ GetCleanedCorpus <- function(raop.df){
                                                       "food", "can",
                                                       "get", "just",
                                                       "now", "last",
-                                                      "really","raop"))
+                                                      "really", "raop"))
     
     raop.corpus <- tm_map( raop.corpus, removePunctuation)
     raop.corpus <- tm_map(raop.corpus, stemDocument, language = "english")
@@ -35,13 +37,12 @@ GetCleanedCorpus <- function(raop.df){
         raop.corpus[[j]] <- gsub("thanks", "thank", raop.corpus[[j]])
     }
     
-    raop.corpus <- tm_map(raop.corpus, stripWhitespace)  
+    raop.corpus <- tm_map(raop.corpus, stripWhitespace)
 
-    raop.corpus <- tm_map( raop.corpus, PlainTextDocument) 
-    
+    raop.corpus <- tm_map( raop.corpus, PlainTextDocument)
+
     return(raop.corpus)
 }
-
 
 GetDocTermFreq <- function(corpus){
 
@@ -57,7 +58,6 @@ TokenizeCorpusElement <- function(x){
 
     return(unlist(stri_extract_all_words(as.character(x))))
 }
-
 
 GetPostSentimentScore <- function(post.terms, pos, neg){
 
@@ -75,7 +75,7 @@ GetSentimentScoreFromCorpus <- function(raop.corpus, pos, neg){
     number.of.posts <- length(raop.corpus)
     scores <- numeric(number.of.posts)
 
-    for( k in (1:number.of.posts)){
+    for ( k in (1:number.of.posts)){
         ## print(k)                        
         post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
         scores[k]  <- GetPostSentimentScore(post.terms, pos, neg)
@@ -84,7 +84,7 @@ GetSentimentScoreFromCorpus <- function(raop.corpus, pos, neg){
     return(scores)
 }
 
-GetNarrativesScoreFromCorpus <- function(raop.corpus,narrative.words){
+GetNarrativesScoreFromCorpus <- function(raop.corpus, narrative.words){
     
     number.of.posts <- length(raop.corpus)
     narrative.score  <- numeric(number.of.posts)
@@ -97,42 +97,29 @@ GetNarrativesScoreFromCorpus <- function(raop.corpus,narrative.words){
     }
 
     ## Normalize post.scores
-    narrative.score[k] <- narrative.score[k]/max(narrative.score[k])
+    ## narrative.score <- narrative.score/max(narrative.score)
+
+    ## Compute Deciles
+    ##narrative.score <- ConvertToDecile(narrative.score)
     
     return(narrative.score)
 }
 
-ConvertToDecile <- function(x,max_x, min_x){
-
-    delta <- (max_x - min_x)/10.00
-    xdc <- round(x/delta)
-    
-    return(xdc)
-}
-
-
-TranformVarToMedianStandatVar <- function(x){
-
-    return(x - median(x))
-}
-
+## Data Tranformations tools
 TransformVariable <- function(x, max_x, min_x){    
 
     return( x/(max_x - min_x))
     ##return( (x - median(x))/(max_x - min_x) )
 }
 
-TransformVariableToDecile <- function(x){
+ConvertToDecile <- function(x, decile_x = NULL){
 
-    bp <- boxplot(x)
-    bp.max <- bp$stats[5]
-    bp.min <- bp$stats[1]
-    delta <- (bp.max - bp.min)/10
+    assert_that(is.numeric(x))
     
-    breaks <- seq(from = bp.min, to = bp.max, by=delta)
+    if( exists("decile__x") == FALSE){
+        decile_x <- quantile(x, seq(0, .9, .1))
+    }
+    xdc <- findInterval(x, decile_x)
     
-    xc <- cut(x, breaks = breaks)
-    xcn <- as.numeric(xcut)
-    
-    return(xcn)
+    return(xdc)
 }
