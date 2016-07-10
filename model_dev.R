@@ -34,17 +34,6 @@ print(dim(val.data))
 
 resp.var <- 'requester_received_pizza'
 
-## cols.num <- c("requester_received_pizza",
-##               "requester_account_age_in_days_at_request", 
-##               "requester_number_of_posts_at_request",
-##               "requester_upvotes_minus_downvotes_at_request", 
-##               "nword",
-##               "desire.score", "family.score", "money.score", 
-##               "job.score", "student.score")
-
-## data.exp <- DataExplorer(train.data[,cols.num],resp.var)
-## data.exp$GetCorrDashBoard()
-
 cat("Featuring Selection... \n")
 param.list <- list("objective" = "binary:logistic",
                    "eta" = 0.01,
