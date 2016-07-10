@@ -13,8 +13,10 @@ library(feather, quietly = TRUE )
 library(ggplot2, quietly = TRUE )
 library(wordcloud, quietly = TRUE )
 library(gridExtra, quietly = TRUE )
+library(dplyr, quietly = TRUE )
 
 source("./utils/utils.R")
+source("./utils/features_selection.R")
 
 raop.target <- read_feather("./data/stage/raop_target.feather" )
 
@@ -32,8 +34,10 @@ cols.num <- c("requester_received_pizza",
               "requester_number_of_posts_at_request",
               "requester_number_of_posts_on_raop_at_request",
               "requester_upvotes_minus_downvotes_at_request",
-              "requester_username","nword",
-              "post.sent")
+              "nword",
+              "post.sent",
+              "desire.score","family.score",
+              "job.score", "money.score","student.score")
 
 cat("Summaring vars...\n")
 cat(" numeric: \n")
@@ -42,9 +46,17 @@ print(summary(raop.target[,cols.num]))
 cat(" cat: \n")
 print(summary(raop.target[,cols.cat]))
 
+data.view <- raop.target[,cols.num]
+names(data.view) <- paste0("x",as.character(seq(1:ncol(data.view))))
+data.exp <- DataExplorer(data.view ,"x1")
+data.exp$GetCorrDashBoard()
+
 ## Text analysis
-pizza.df   <- raop.df[raop.df["requester_received_pizza"] == TRUE,]
-nopizza.df <- raop.df[raop.df["requester_received_pizza"] == FALSE,]
+pizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == TRUE)
+##pizza.df  <- raop.df[raop.df["requester_received_pizza"] == TRUE,]
+
+##nopizza.df <- raop.df[raop.df["requester_received_pizza"] == FALSE,]
+nopizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == FALSE)
 
 pizza.corpus   <- GetCleanedCorpus(pizza.df)
 nopizza.corpus <- GetCleanedCorpus(nopizza.df)
@@ -53,6 +65,7 @@ pizza.term.freq <- GetDocTermFreq(pizza.corpus)
 nopizza.term.freq <- GetDocTermFreq(nopizza.corpus)
 
 set.seed(142)
+opar <- par() ## copy defaults
 par(mfrow=c(1,2))
 
 ## 33% most often words
@@ -63,6 +76,7 @@ text(x=0.5, y=1.1, "pizza")
 wordcloud(names(nopizza.term.freq), nopizza.term.freq, min.freq=250,
           scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
 text(x=0.5, y=1.1, "no pizza")
+par(opar) ## reset defaults
 
 nw <- 21
 pizza.data.view <- data.frame(word=names(pizza.term.freq[1:nw]),
@@ -91,3 +105,11 @@ p.right <- ggplot(nopizza.data.view, aes(x=word, y=freq)) +
     coord_flip() + ggtitle("no pizza")
 
 grid.arrange (p.left, p.right, ncol=2)
+
+cols.num <- c("requester_received_pizza",
+              "requester_account_age_in_days_at_request", 
+              "requester_number_of_posts_at_request",
+              "requester_upvotes_minus_downvotes_at_request", 
+              "nword",
+              "desire.score", "family.score", "money.score", 
+              "job.score", "student.score")
