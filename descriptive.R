@@ -52,15 +52,13 @@ data.exp <- DataExplorer(data.view ,"x1")
 data.exp$GetCorrDashBoard()
 data.exp$GetHistogramDashBoard()
 
-
-
 ## Text analysis
 pizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == TRUE)
 
 nopizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == FALSE)
 
-pizza.corpus   <- GetCleanedCorpus(pizza.df)
-nopizza.corpus <- GetCleanedCorpus(nopizza.df)
+pizza.corpus   <- GetCleanedCorpus(pizza.df$request_text)
+nopizza.corpus <- GetCleanedCorpus(nopizza.df$request_text)
 
 pizza.term.freq <- GetDocTermFreq(pizza.corpus)
 nopizza.term.freq <- GetDocTermFreq(nopizza.corpus)

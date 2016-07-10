@@ -54,7 +54,7 @@ BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
     raop.df$posted.raop.before  <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
 
     cat("Text engineering...\n")
-    raop.corpus       <- GetCleanedCorpus(raop.df)
+    raop.corpus       <- GetCleanedCorpus(raop.df$request_text)
 
     ## Sentiment score
     raop.df$post.sent <- GetSentimentScoreFromCorpus(raop.corpus,
