@@ -14,11 +14,14 @@ library(ggplot2, quietly = TRUE )
 library(wordcloud, quietly = TRUE )
 library(gridExtra, quietly = TRUE )
 library(dplyr, quietly = TRUE )
+library(jsonlite, quietly = TRUE )
 
 source("./utils/utils.R")
 source("./utils/features_selection.R")
 
-raop.target <- read_feather("./data/stage/raop_target.feather" )
+settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
+
+raop.target <- read_feather( settings$data_target_path)
 
 ## =================================
 

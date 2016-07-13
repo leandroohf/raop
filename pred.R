@@ -15,16 +15,17 @@ library(feather, quietly = TRUE )
 source("./utils/data.R")
 source("./utils/utils.R")
 
+settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
+
 cat('Loading model...\n')
-load(file='./models/m14.rda')
+load(file=settings$raop_model_path)
 split.list <- m14$GetData()
 train.data <- split.list[[1]]
 
 cat('Loading new data...\n')
-newdata.file <- "data/raw/new_request_data.json"
-newdata.df   <- fromJSON( newdata.file, flatten=TRUE)
+newdata.df   <- fromJSON( settings$new_data_raw_path, flatten=TRUE)
 
-cat('Loading dictinaries...\n')
+cat('Loading dictinaries...n')
 dict.list <- LoadDcitionariesFromSetings(settings)
 sent.dict      <- dict.list[[1]]
 narrative.dict <- dict.list[[2]]

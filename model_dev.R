@@ -10,6 +10,7 @@
 #* ****************************************************************
 
 library(feather, quietly = TRUE )
+library(jsonlite, quietly = TRUE )
 
 source("./utils/data.R")
 source("./utils/utils.R")
@@ -17,7 +18,9 @@ source("./utils/features_selection.R")
 source("./utils/report.R")
 source("./utils/model.R")
 
-raop.target <- read_feather("./data/stage/raop_target.feather" )
+settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
+
+raop.target <- read_feather( settings$data_target_path)
 
 data.split.list <- DesignData(raop.target)
 train.data <- data.split.list[[1]]
@@ -76,4 +79,4 @@ cat('Report model summary...\n')
 BuildModelReport(m14$GetGlmObject(),resp.var,train.data,val.data)
 
 cat('Saving model...\n')
-save(m14,file='./models/m14.rda')
+save(m14,file=settings$raop_model_path)

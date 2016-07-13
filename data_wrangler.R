@@ -26,4 +26,4 @@ raop.df   <- fromJSON( raop.file, flatten=TRUE)
 
 raop.target <- BuildDataTarget(raop.df, sent.dict, narrative.dict)
 
-write_feather(raop.target, "data/stage/raop_target.feather")
+write_feather(raop.target, settings$data_target_path)
