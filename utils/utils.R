@@ -95,12 +95,6 @@ GetNarrativesScoreFromCorpus <- function(raop.corpus, narrative.words){
         ## post score = count the number of shared  words
         narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/nwords
     }
-
-    ## Normalize post.scores
-    ## narrative.score <- narrative.score/max(narrative.score)
-
-    ## Compute Deciles
-    ##narrative.score <- ConvertToDecile(narrative.score)
     
     return(narrative.score)
 }
