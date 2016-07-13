@@ -9,30 +9,23 @@
 ##  impolite and remember to cite the author and give him his credits.
 ##* ****************************************************************
 
-RAoPModel <- function(train.data, val.data, resp.var){
 
+library(formula.tools, quietly = TRUE )
+
+RAoPModel <- function(glm.formula, train.data, val.data){
+
+    resp.var        <- formula.tools::lhs(glm.forluma)
+    predictors.name <- formula.tools::rhs.vars(glm.forluma) 
+    
     stopifnot(resp.var %in% names(train.data))
     stopifnot(names(val.data) %in% names(train.data))
-    
-    predictors.name <- names(train.data)
-    predictors.name <- predictors.name[predictors.name != resp.var]
 
-    ## TODO Refator it: Pass formula as parameter
-    m14 <- glm(requester_received_pizza ~
-               requester_upvotes_minus_downvotes_at_request +
-               nword +
-               requester_account_age_in_days_at_request +
-               money.score +
-               post.sent +
-               has.link +
-               first.half.of.month+
-               posted.raop.before,
-           family=binomial(link='logit'),
-           data=train.data)
+    m14 <- glm( glm.formula, family=binomial(link='logit'),
+               data=train.data)
     
     list(
-        GetResponseVar = function(){
-            return(resp.var)
+        GetModelFormula = function(){
+            return(glm.formula)
         },
         GetData = function(){
             return(list(train.data,val.data))

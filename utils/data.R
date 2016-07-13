@@ -8,7 +8,8 @@ BuildDataTarget <- function(raop.df, sent.dict, narrative.dict){
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
 
     raop.df <- BuildNewFeatures(raop.df, sent.dict, narrative.dict)
-    
+
+    ## TODO Sent it to settings.json (Configure, do not integrate )
     cat("Selecting target vars... \n")
     cols.target <- c("in_test_set","request_id","request_text",
                      "requester_account_age_in_days_at_request",
@@ -96,7 +97,7 @@ DesignData <- function(raop.target){
     cat("Selecting model candidates vars ... \n")
     dev.data <- raop.target %>%
         dplyr::select( dplyr::one_of(cols.pred))
-
+    
     dev.data <- BalanceDataClass(dev.data)
 
     ## XXX Improve this code. I need to pass the max n min used in

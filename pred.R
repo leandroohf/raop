@@ -29,7 +29,6 @@ dict.list <- LoadDcitionariesFromSetings(settings)
 sent.dict      <- dict.list[[1]]
 narrative.dict <- dict.list[[2]]
 
-
 newdata.df <- BuildNewFeatures(newdata.df, sent.dict, narrative.dict)
 new.data   <- newdata.df[,m14$GetPredictorsName()]
 new.data   <- TransformNumericalVars(new.data,train.data)

@@ -59,13 +59,21 @@ xgb.exp$PlotRelativeImportance()
 xgb.exp$GetXGBoostDashBoard()
 
 cat('Model building...\n')
-m14 <- RAoPModel(train.data, val.data, resp.var)
+
+glm.formula <- formula("requester_received_pizza ~
+                           requester_upvotes_minus_downvotes_at_request +
+                           nword +
+                           requester_account_age_in_days_at_request +
+                           money.score +
+                           post.sent +
+                           has.link +
+                           first.half.of.month+
+                           posted.raop.before")
+
+m14 <- RAoPModel(glm.formula,train.data, val.data)
 
 cat('Report model summary...\n')
 BuildModelReport(m14$GetGlmObject(),resp.var,train.data,val.data)
 
 cat('Saving model...\n')
 save(m14,file='./models/m14.rda')
-
-## write_feather(train.data, "data/stage/train_data.feather")
-## write_feather(val.data, "data/stage/val_data.feather")
