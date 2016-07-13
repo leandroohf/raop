@@ -10,5 +10,5 @@
     "job_dict_path": "./dict/job.txt",
     "money_dict_path": "./dict/money.txt",
     "student_dict_path": "./dict/student.txt",
-    "raop_model_path": "./models/m14.rda"
+    "raop_model_path": "./models/m14.rds"
 }

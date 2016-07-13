@@ -18,8 +18,8 @@ source("./utils/utils.R")
 settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
 
 cat('Loading model...\n')
-load(file=settings$raop_model_path)
-split.list <- m14$GetData()
+raop.model <- readRDS(settings$raop_model_path)
+split.list <- raop.model$GetData()
 train.data <- split.list[[1]]
 
 cat('Loading new data...\n')
@@ -31,11 +31,11 @@ sent.dict      <- dict.list[[1]]
 narrative.dict <- dict.list[[2]]
 
 newdata.df <- BuildNewFeatures(newdata.df, sent.dict, narrative.dict)
-new.data   <- newdata.df[,m14$GetPredictorsName()]
+new.data   <- newdata.df[,raop.model$GetPredictorsName()]
 new.data   <- TransformNumericalVars(new.data,train.data)
 
 cat('Make predition...\n')
-pred <- m14$GetPrediction(new.data)
+pred <- raop.model$GetPrediction(new.data)
 print(pred)
 
 cat('Saving predition...\n')

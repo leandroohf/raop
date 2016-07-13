@@ -79,4 +79,5 @@ cat('Report model summary...\n')
 BuildModelReport(m14$GetGlmObject(),resp.var,train.data,val.data)
 
 cat('Saving model...\n')
-save(m14,file=settings$raop_model_path)
+saveRDS(m14, settings$raop_model_path)
+
