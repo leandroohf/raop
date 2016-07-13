@@ -24,10 +24,13 @@ cat('Loading new data...\n')
 newdata.file <- "data/raw/new_request_data.json"
 newdata.df   <- fromJSON( newdata.file, flatten=TRUE)
 
-pos.words <- readLines("./dict/positive-words.txt")
-neg.words <- readLines("./dict/negative-words.txt")
+cat('Loading dictinaries...\n')
+dict.list <- LoadDcitionariesFromSetings(settings)
+sent.dict      <- dict.list[[1]]
+narrative.dict <- dict.list[[2]]
 
-newdata.df <- BuildNewFeatures(newdata.df, pos.words, neg.words)    
+
+newdata.df <- BuildNewFeatures(newdata.df, sent.dict, narrative.dict)
 new.data   <- newdata.df[,m14$GetPredictorsName()]
 new.data   <- TransformNumericalVars(new.data,train.data)
 
