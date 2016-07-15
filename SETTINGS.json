@@ -10,5 +10,22 @@
     "job_dict_path": "./dict/job.txt",
     "money_dict_path": "./dict/money.txt",
     "student_dict_path": "./dict/student.txt",
-    "raop_model_path": "./models/m14.rds"
+    "raop_model_path": "./models/m14.rds",
+    "cols_target" : ["in_test_set","request_id","request_text",
+                     "requester_account_age_in_days_at_request",
+                     "requester_days_since_first_post_on_raop_at_request",
+                     "requester_number_of_posts_at_request",
+                     "requester_number_of_posts_on_raop_at_request",
+                     "requester_received_pizza",
+                     "requester_upvotes_minus_downvotes_at_request",
+                     "requester_username","nword", "has.link",
+                     "request.date", "first.half.of.month",
+                     "posted.raop.before", "post.sent", "is.weekend",
+                     "desire.score","family.score","job.score","money.score",
+                     "student.score"],
+    "cols_to_tranform": ["requester_account_age_in_days_at_request",
+                           "requester_number_of_posts_at_request",
+                           "requester_upvotes_minus_downvotes_at_request",
+                           "nword", 
+                           "post.sent"]
 }

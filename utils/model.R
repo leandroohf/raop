@@ -14,8 +14,8 @@ library(formula.tools, quietly = TRUE )
 
 RAoPModel <- function(glm.formula, train.data, val.data){
 
-    resp.var        <- formula.tools::lhs(glm.forluma)
-    predictors.name <- formula.tools::rhs.vars(glm.forluma) 
+    resp.var        <- as.character(formula.tools::lhs(glm.formula))
+    predictors.name <- formula.tools::rhs.vars(glm.formula) 
     
     stopifnot(resp.var %in% names(train.data))
     stopifnot(names(val.data) %in% names(train.data))

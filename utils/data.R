@@ -2,7 +2,7 @@ library(stringr, quietly = TRUE )
 library(stringi, quietly = TRUE )
 library(assertthat, quietly = TRUE )
 
-BuildDataTarget <- function(raop.df, sent.dict, narrative.dict){
+BuildDataTarget <- function(raop.df, sent.dict, narrative.dict, cols.target){
 
     ## Defensive programming
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
@@ -11,18 +11,6 @@ BuildDataTarget <- function(raop.df, sent.dict, narrative.dict){
 
     ## TODO Sent it to settings.json (Configure, do not integrate )
     cat("Selecting target vars... \n")
-    cols.target <- c("in_test_set","request_id","request_text",
-                     "requester_account_age_in_days_at_request",
-                     "requester_days_since_first_post_on_raop_at_request",
-                     "requester_number_of_posts_at_request",
-                     "requester_number_of_posts_on_raop_at_request",
-                     "requester_received_pizza",
-                     "requester_upvotes_minus_downvotes_at_request",
-                     "requester_username","nword", "has.link",
-                     "request.date", "first.half.of.month",
-                     "posted.raop.before", "post.sent", "is.weekend",
-                     "desire.score","family.score","job.score","money.score",
-                     "student.score")
 
     raop.target <- raop.df[,cols.target]
 
@@ -81,30 +69,15 @@ BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
     return(raop.df)
 }
 
-DesignData <- function(raop.target){
-    
-    ## TODO Read from settings.json file
-    cols.pred <- c("requester_received_pizza",
-                   "requester_account_age_in_days_at_request",
-                   "requester_number_of_posts_at_request",
-                   "requester_upvotes_minus_downvotes_at_request",
-                   "nword", "has.link",
-                   "first.half.of.month",
-                   "posted.raop.before", "post.sent","is.weekend",
-                   "desire.score","family.score","money.score",
-                   "job.score", "student.score")
-    
-    cat("Selecting model candidates vars ... \n")
-    dev.data <- raop.target %>%
-        dplyr::select( dplyr::one_of(cols.pred))
-    
-    dev.data <- BalanceDataClass(dev.data)
+DesignData <- function(raop.target, cols_to_transform){
+        
+    dev.data <- BalanceDataClass(raop.target)
 
     ## XXX Improve this code. I need to pass the max n min used in
     ## train phase for new data. So I need to pass a reference !?
     ## This is a temp solution. I am wasting memory and performance
     ## but reducing implementation cost
-    dev.data   <- TransformNumericalVars(dev.data,dev.data)
+    dev.data   <- TransformNumericalVars(dev.data,dev.data, cols_to_transform)
     split.list <- SplitData(dev.data) ## <= list(train.data, val.data)
 
     return(split.list)
@@ -140,19 +113,14 @@ BalanceDataClass <- function(raop.target){
     return(dev.data)
 }
 
-TransformNumericalVars <- function(dev.data,train.data){
+TransformNumericalVars <- function(dev.data, train.data, cols_to_transform){
 
     ## TODO Pass cols to transform as args
-    ## Tranforms vars
+    ## Tranforms vars (Estah gerando BUG no predictor)
     cat("Mapping numerical columns to 0 - 1 range ... \n")
-    cols.to.transform <- c("requester_account_age_in_days_at_request",
-                           "requester_number_of_posts_at_request",
-                           "requester_upvotes_minus_downvotes_at_request",
-                           "nword", 
-                           "post.sent")
 
     ## XXX If start to become slow, optimize it
-    for( cc in cols.to.transform){
+    for( cc in cols_to_transform ){        
         print(cc)
         x <- unlist((dev.data[, cc]))
         xref <- unlist((train.data[, cc]))

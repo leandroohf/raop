@@ -21,8 +21,8 @@ dict.list <- LoadDcitionariesFromSetings(settings)
 sent.dict      <- dict.list[[1]]
 narrative.dict <- dict.list[[2]]
 
-raop.file <- settings$data_raw_path
-raop.df   <- fromJSON( raop.file, flatten=TRUE)
+raop.df     <- fromJSON( settings$data_raw_path, flatten=TRUE)
+raop.target <- BuildDataTarget(raop.df, sent.dict, narrative.dict,
+                               settings$cols_target)
 
-raop.target <- BuildDataTarget(raop.df, sent.dict, narrative.dict)
 write_feather(raop.target, settings$data_target_path)

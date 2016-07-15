@@ -22,9 +22,25 @@ settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
 
 raop.target <- read_feather( settings$data_target_path)
 
-data.split.list <- DesignData(raop.target)
-train.data <- data.split.list[[1]]
-val.data   <- data.split.list[[2]]
+
+cols.pred <- c("requester_received_pizza",
+               "requester_account_age_in_days_at_request",
+               "requester_number_of_posts_at_request",
+               "requester_upvotes_minus_downvotes_at_request",
+               "nword", "has.link",
+               "first.half.of.month",
+               "posted.raop.before", "post.sent","is.weekend",
+               "desire.score","family.score","money.score",
+               "job.score", "student.score")
+    
+cat("Selecting model candidates vars ... \n")
+dev.data <- raop.target %>%
+    dplyr::select( dplyr::one_of(cols.pred))
+
+
+data.split.list <- DesignData(dev.data, settings$cols_to_tranform)
+train.data      <- data.split.list[[1]]
+val.data        <- data.split.list[[2]]
 
 ## There is 1 Nan in each narrative score 
 train.data <- na.omit(train.data)
@@ -62,7 +78,6 @@ xgb.exp$PlotRelativeImportance()
 xgb.exp$GetXGBoostDashBoard()
 
 cat('Model building...\n')
-
 glm.formula <- formula("requester_received_pizza ~
                            requester_upvotes_minus_downvotes_at_request +
                            nword +

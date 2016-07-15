@@ -32,7 +32,8 @@ narrative.dict <- dict.list[[2]]
 
 newdata.df <- BuildNewFeatures(newdata.df, sent.dict, narrative.dict)
 new.data   <- newdata.df[,raop.model$GetPredictorsName()]
-new.data   <- TransformNumericalVars(new.data,train.data)
+new.data   <- TransformNumericalVars(new.data,train.data,
+                                     settings$cols_to_transform)
 
 cat('Make predition...\n')
 pred <- raop.model$GetPrediction(new.data)
