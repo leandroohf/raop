@@ -20,25 +20,10 @@ source("./utils/model.R")
 
 settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
 
-raop.target <- read_feather( settings$data_target_path)
+cat('Loading data engineer...\n')
+raop.engineer <- readRDS(settings$data_engineer_path)
 
-
-cols.pred <- c("requester_received_pizza",
-               "requester_account_age_in_days_at_request",
-               "requester_number_of_posts_at_request",
-               "requester_upvotes_minus_downvotes_at_request",
-               "nword", "has.link",
-               "first.half.of.month",
-               "posted.raop.before", "post.sent","is.weekend",
-               "desire.score","family.score","money.score",
-               "job.score", "student.score")
-    
-cat("Selecting model candidates vars ... \n")
-dev.data <- raop.target %>%
-    dplyr::select( dplyr::one_of(cols.pred))
-
-
-data.split.list <- DesignData(dev.data, settings$cols_to_tranform)
+data.split.list <- raop.engineer$GetDesignData()
 train.data      <- data.split.list[[1]]
 val.data        <- data.split.list[[2]]
 
@@ -95,4 +80,3 @@ BuildModelReport(m14$GetGlmObject(),resp.var,train.data,val.data)
 
 cat('Saving model...\n')
 saveRDS(m14, settings$raop_model_path)
-

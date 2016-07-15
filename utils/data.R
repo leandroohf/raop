@@ -2,22 +2,57 @@ library(stringr, quietly = TRUE )
 library(stringi, quietly = TRUE )
 library(assertthat, quietly = TRUE )
 
-BuildDataTarget <- function(raop.df, sent.dict, narrative.dict, cols.target){
+RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
+                             raop.settings){
+
+    
+    raop.target <- RAoPDataEngineer_BuildDataTarget(raop.df, sent.dict,
+                                                    narrative.dict,
+                                                    raop.settings$cols_target)
+
+    data.split.list <- RAoPDataEngineer_DesignData( raop.target,
+                                                   raop.settings$cols_to_tranform)
+    
+    train.data      <- data.split.list[[1]]
+    val.data        <- data.split.list[[2]]
+    
+    cat("data target ok \n")
+    list(
+        GetDataTarget = function(){
+            return(raop.target)
+        },
+        ## TODO Pass ratio_ n seed_ as args (Now is ignored)
+        GetDesignData = function(ratio_ = 0.70, seed_ = 13){        
+            return(data.split.list)
+        },
+        PreProcessNewData = function(newdata.df){
+            new.data <- RAoPDataEngineer_PreProcessNewData(newdata.df,
+                                                           sent.dict,
+                                                           narrative.dict,
+                                                           raop.settings)
+            return(new.data)
+        }
+    )
+}
+
+RAoPDataEngineer_BuildDataTarget <- function(raop.df, sent.dict, narrative.dict,
+                                             cols.target){
 
     ## Defensive programming
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
 
-    raop.df <- BuildNewFeatures(raop.df, sent.dict, narrative.dict)
+    raop.df <- RAoPDataEngineer_BuildNewFeatures(raop.df, sent.dict, narrative.dict)
 
     ## TODO Sent it to settings.json (Configure, do not integrate )
     cat("Selecting target vars... \n")
-
-    raop.target <- raop.df[,cols.target]
+    
+    raop.target <- raop.df %>%
+        dplyr::select( dplyr::one_of( cols.target ))
 
     return(raop.target)
 }
 
-BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
+RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
     
     ## (Defensive programming)
     cols.check <- c("in_test_set","request_id","request_text",
@@ -69,21 +104,21 @@ BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict){
     return(raop.df)
 }
 
-DesignData <- function(raop.target, cols_to_transform){
+RAoPDataEngineer_DesignData <- function(raop.target, cols_to_transform){
         
-    dev.data <- BalanceDataClass(raop.target)
+    dev.data <- RAoPDataEngineer_BalanceDataClass(raop.target)
 
     ## XXX Improve this code. I need to pass the max n min used in
     ## train phase for new data. So I need to pass a reference !?
     ## This is a temp solution. I am wasting memory and performance
     ## but reducing implementation cost
-    dev.data   <- TransformNumericalVars(dev.data,dev.data, cols_to_transform)
-    split.list <- SplitData(dev.data) ## <= list(train.data, val.data)
+    dev.data   <- RAoPDataEngineer_TransformNumericalVars(dev.data,dev.data, cols_to_transform)
+    split.list <- RAoPDataEngineer_SplitData(dev.data) ## <= list(train.data, val.data)
 
     return(split.list)
 }
 
-BalanceDataClass <- function(raop.target){
+RAoPDataEngineer_BalanceDataClass <- function(raop.target){
     
     ## TODO Read from settings.json file
     karma.thr <- 2889
@@ -113,7 +148,7 @@ BalanceDataClass <- function(raop.target){
     return(dev.data)
 }
 
-TransformNumericalVars <- function(dev.data, train.data, cols_to_transform){
+RAoPDataEngineer_TransformNumericalVars <- function(dev.data, train.data, cols_to_transform){
 
     ## TODO Pass cols to transform as args
     ## Tranforms vars (Estah gerando BUG no predictor)
@@ -130,7 +165,7 @@ TransformNumericalVars <- function(dev.data, train.data, cols_to_transform){
     return(dev.data)
 }
 
-SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
+RAoPDataEngineer_SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
 
     cat("Spliting data in train n test ... \n")
     train.size <- round(nrow(dev.data)*ratio_)
@@ -143,6 +178,22 @@ SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
     val.data   <- dev.data[-r,]
 
     return(list(train.data,val.data))
+}
+
+RAoPDataEngineer_PreProcessNewData <- function(newdata.df,sent.dict,narrative.dict,
+                                               raop.settings){
+    
+    new.data <- RAoPDataEngineer_BuildNewFeatures(newdata.df, sent.dict,
+                                                  narrative.dict)
+
+    ## Select target cols
+    new.data <- new.data %>%
+        dplyr::select( dplyr::one_of( raop.settings$cols_target ))
+    
+    new.data <- RAoPDataEngineer_TransformNumericalVars(new.data, train.data,
+                                                        raop.settings$cols_to_transform)
+    
+    return(new.data)
 }
 
 LoadDcitionariesFromSetings <- function(settings){

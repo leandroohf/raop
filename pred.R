@@ -19,21 +19,14 @@ settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
 
 cat('Loading model...\n')
 raop.model <- readRDS(settings$raop_model_path)
-split.list <- raop.model$GetData()
-train.data <- split.list[[1]]
+
+cat('Loading data engineer...\n')
+raop.engineer <- readRDS(settings$data_engineer_path)
 
 cat('Loading new data...\n')
 newdata.df   <- fromJSON( settings$new_data_raw_path, flatten=TRUE)
 
-cat('Loading dictinaries...n')
-dict.list <- LoadDcitionariesFromSetings(settings)
-sent.dict      <- dict.list[[1]]
-narrative.dict <- dict.list[[2]]
-
-newdata.df <- BuildNewFeatures(newdata.df, sent.dict, narrative.dict)
-new.data   <- newdata.df[,raop.model$GetPredictorsName()]
-new.data   <- TransformNumericalVars(new.data,train.data,
-                                     settings$cols_to_transform)
+new.data <- raop.engineer$PreProcessNewData(newdata.df)
 
 cat('Make predition...\n')
 pred <- raop.model$GetPrediction(new.data)
@@ -41,4 +34,5 @@ print(pred)
 
 cat('Saving predition...\n')
 pred.df <- cbind(new.data,pred)
-write_feather(pred.df, paste0("data/stage/pred_",lubridate::today(),".feather"))
+pred.file <- paste0("data/stage/pred_",lubridate::today(),".feather"
+write_feather(pred.df, pred.file))

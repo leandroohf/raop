@@ -22,7 +22,9 @@ sent.dict      <- dict.list[[1]]
 narrative.dict <- dict.list[[2]]
 
 raop.df     <- fromJSON( settings$data_raw_path, flatten=TRUE)
-raop.target <- BuildDataTarget(raop.df, sent.dict, narrative.dict,
-                               settings$cols_target)
 
-write_feather(raop.target, settings$data_target_path)
+raop.engineer <- RAoPDataEngineer(raop.df, sent.dict, narrative.dict,
+                                  settings)
+
+cat('Saving data engineer...\n')
+saveRDS(raop.engineer, settings$data_engineer_path)
