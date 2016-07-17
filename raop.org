@@ -1,0 +1,33 @@
+
+
+
+* Introduction
+
+  Eu vou basear bem no Rpub
+  http://www.runzemc.com/2014/08/random-acts-of-pizza.html
+  https://rpubs.com/kuhnrl30/RAOP
+
+  * Explain waht is RAoP
+  * Discuss a little about article reference
+  * Discuss what we decided to do n why
+
+
+* Data
+
+  * Explain what I did in descriptive
+
+* Exploratory
+
+  plot graphs that I found on Rpubs
+
+  #+BEGIN_SRC R :session :tangle exp.R
+  
+  #+END_SRC
+
+* Model development
+
+  Add model creation code and some comments
+
+* Model diagnostics
+
+* Conclusion
