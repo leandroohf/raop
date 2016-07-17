@@ -36,32 +36,6 @@ print(dim(train.data))
 cat("val size:\n")
 print(dim(val.data))
 
-resp.var <- 'requester_received_pizza'
-
-cat("Featuring Selection... \n")
-param.list <- list("objective" = "binary:logistic",
-                   "eta" = 0.01,
-                   "min_child_weight" = 3,
-                   "subsample" = 0.80,
-                   "colsample_bytree" = 0.80,
-                   "scale_pos_weight" = 1.00,
-                   "silent" = 1,
-                   "booster" = "gbtree",
-                   "max_depth" = 9,
-                   "eval_metric" = "error")
-
-number.of.models <- 15
-xgb.exp <- XGBoostExplorer(train.data,
-                           val.data,
-                           resp.var,
-                           number.of.models,
-                           param.list)
-
-xgb.exp$PlotRelativeImportance()
-
-## FIXME: PLot is considering RMSE instead of error: #wrong/(total)
-xgb.exp$GetXGBoostDashBoard()
-
 cat('Model building...\n')
 glm.formula <- formula("requester_received_pizza ~
                            requester_upvotes_minus_downvotes_at_request +
