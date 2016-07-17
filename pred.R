@@ -33,6 +33,6 @@ pred <- raop.model$GetPrediction(new.data)
 print(pred)
 
 cat('Saving predition...\n')
-pred.df <- cbind(new.data,pred)
-pred.file <- paste0("data/stage/pred_",lubridate::today(),".feather"
-write_feather(pred.df, pred.file))
+pred.df   <- cbind(new.data,pred)
+pred.file <- paste0("data/stage/pred_",lubridate::today(),".feather")
+write_feather(pred.df, pred.file)
