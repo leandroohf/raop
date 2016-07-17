@@ -28,3 +28,5 @@ raop.engineer <- RAoPDataEngineer(raop.df, sent.dict, narrative.dict,
 
 cat('Saving data engineer...\n')
 saveRDS(raop.engineer, settings$data_engineer_path)
+
+write_feather(raop.engineer$GetDataTarget(), settings$data_target_path)
