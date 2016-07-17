@@ -69,9 +69,10 @@ RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict
     raop.df$nword <- str_count(raop.df[,"request_text"], "\\S+")
     raop.df$has.link       <- str_detect( raop.df[,"request_text"], "https?://")
 
-    raop.df$request.date   <- as.POSIXct(raop.df[,"unix_timestamp_of_request"],
-                                         origin="1970-01-01", tz = "UTC")
-    
+    raop.df$request.date   <- as.Date(as.POSIXct(raop.df[,"unix_timestamp_of_request"],
+                                                 origin="1970-01-01", tz = "UTC"))
+
+    raop.df$account_age         <- raop.df$request.date - as.Date('2010-12-08')        
     raop.df$first.half.of.month <- (lubridate::day(raop.df$request.date) < 16)
     raop.df$is.weekend          <- (lubridate::wday(raop.df$request.date) %in%  c(1,6,7))
 
