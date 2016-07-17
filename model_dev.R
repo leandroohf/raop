@@ -14,7 +14,6 @@ library(jsonlite, quietly = TRUE )
 
 source("./utils/data.R")
 source("./utils/utils.R")
-source("./utils/features_selection.R")
 source("./utils/report.R")
 source("./utils/model.R")
 
