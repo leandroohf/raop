@@ -345,19 +345,20 @@ RegsubsetExplorer_GetModelRegSubset <- function(model.k,reg.dev,
 XGBoostExplorer <- function(train.db, test.db, response.var, number.of.models,param.list){
 
     stopifnot(number.of.models > 10)
+    stopifnot(response.var %in% names(test.db))
+    stopifnot(response.var %in% names(train.db))
     stopifnot(names(train.db) %in% names(test.db))
     stopifnot(ncol(train.db) %in% ncol(test.db))
     stopifnot(c("objective","eta","subsample","colsample_bytree") %in% names(
                                                                            param.list))
-    
     min.nround <- 5
     max.nround <- 100
     
     train.label  <- as.matrix(train.db[,response.var])
-    
-    train.matrix <- as.matrix(train.db[,names(train.db) != response.var])
+
+    train.matrix <- as.matrix(train.db[, names(train.db) != response.var])
     xgb.train    <- xgb.DMatrix(data = train.matrix , label=train.label)
-    
+
     test.label  <- as.matrix(test.db[,response.var])
     test.matrix <- as.matrix(test.db[, names(test.db) != response.var])
     xgb.test    <- xgb.DMatrix(data = test.matrix, label=test.label)
@@ -369,13 +370,13 @@ XGBoostExplorer <- function(train.db, test.db, response.var, number.of.models,pa
     
     cat("\nComputing model selection \n")
     error.list <- XGBoostExplorer_ComputeModelsError(xgb.train,
-                                                                train.label,
-                                                                xgb.test,
-                                                                test.label,
-                                                                param.list,
-                                                                min.nround,
-                                                                max.nround,
-                                                                number.of.models)
+                                                     train.label,
+                                                     xgb.test,
+                                                     test.label,
+                                                     param.list,
+                                                     min.nround,
+                                                     max.nround,
+                                                     number.of.models)
     
     train.rmse <- error.list[[1]]
     test.rmse  <- error.list[[2]]
