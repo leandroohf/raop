@@ -36,6 +36,8 @@ print(dim(train.data))
 cat("val size:\n")
 print(dim(val.data))
 
+resp.var <- 'requester_received_pizza'
+
 cat('Model building...\n')
 glm.formula <- formula("requester_received_pizza ~
                            requester_upvotes_minus_downvotes_at_request +
