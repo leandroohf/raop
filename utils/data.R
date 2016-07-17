@@ -15,8 +15,7 @@ RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
     
     train.data      <- data.split.list[[1]]
     val.data        <- data.split.list[[2]]
-    
-    cat("data target ok \n")
+
     list(
         GetDataTarget = function(){
             return(raop.target)
