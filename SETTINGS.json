@@ -1,5 +1,6 @@
 {
     "data_raw_path": "./data/raw/pizza_request_dataset.json",
+    "data_target_path": "data/stage/raop_target.feather",
     "new_data_raw_path": "./data/raw/new_request_data.json",
     "data_engineer_path": "data/stage/raop_engineer.rds",    
     "pos_dict_path": "./dict/positive-words.txt",
