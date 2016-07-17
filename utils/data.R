@@ -41,6 +41,8 @@ RAoPDataEngineer_BuildDataTarget <- function(raop.df, sent.dict, narrative.dict,
     ## Defensive programming
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
 
+    ##raop.df$requester_received_pizza <- as.numeric(raop.df$requester_received_pizza)
+
     raop.df <- RAoPDataEngineer_BuildNewFeatures(raop.df, sent.dict, narrative.dict)
 
     ## TODO Sent it to settings.json (Configure, do not integrate )
@@ -67,18 +69,38 @@ RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict
     
     cat("Features engineering...\n")
     raop.df$nword <- str_count(raop.df[,"request_text"], "\\S+")
-    raop.df$has.link       <- str_detect( raop.df[,"request_text"], "https?://")
+
+    raop.df$has.link           <- str_detect( raop.df[,"request_text"], "https?://")
+    ##raop.df$has.link           <-  as.numeric(raop.df$has.link)
+    raop.df$posted.raop.before <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
+    ##raop.df$posted.raop.before <- as.numeric(raop.df$posted.raop.before)
+    
+    raop.df <- RAoPDataEngineer_BuildTimeFeatures(raop.df)
+    
+    cat("Text engineering...\n")
+    raop.df <- RAoPDataEngineer_BuildTextFeatures(raop.df, sent.dict, narrative.dict)
+
+    cat("Convert numerical vars to decile...\n")
+    
+    return(raop.df)
+}
+
+RAoPDataEngineer_BuildTimeFeatures <- function(raop.df){
 
     raop.df$request.date   <- as.Date(as.POSIXct(raop.df[,"unix_timestamp_of_request"],
                                                  origin="1970-01-01", tz = "UTC"))
 
     raop.df$account_age         <- raop.df$request.date - as.Date('2010-12-08')        
     raop.df$first.half.of.month <- (lubridate::day(raop.df$request.date) < 16)
+    ##raop.df$first.half.of.month <- as.numeric(raop.df$first.half.of.month)
     raop.df$is.weekend          <- (lubridate::wday(raop.df$request.date) %in%  c(1,6,7))
+    ##raop.df$is.weekend          <-  as.numeric(raop.df$is.weekend)
+    
+    return(raop.df)
+}
 
-    raop.df$posted.raop.before  <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
-
-    cat("Text engineering...\n")
+RAoPDataEngineer_BuildTextFeatures <- function(raop.df, sent.dict, narrative.dict){
+    
     raop.corpus       <- GetCleanedCorpus(raop.df$request_text)
 
     ## Sentiment score
@@ -101,7 +123,7 @@ RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict
     
     raop.df$student.score <- GetNarrativesScoreFromCorpus(raop.corpus,
                                                           narrative.dict$student)
-
+    
     return(raop.df)
 }
 
@@ -114,6 +136,18 @@ RAoPDataEngineer_DesignData <- function(raop.target, cols_to_transform){
     ## This is a temp solution. I am wasting memory and performance
     ## but reducing implementation cost
     dev.data   <- RAoPDataEngineer_TransformNumericalVars(dev.data,dev.data, cols_to_transform)
+
+    cols.pred <- c("requester_account_age_in_days_at_request", 
+                   "requester_received_pizza", 
+                   "requester_upvotes_minus_downvotes_at_request",
+                   "nword", "has.link", "first.half.of.month", "posted.raop.before", 
+                   "post.sent", "is.weekend", "desire.score", "family.score", "job.score", 
+                   "money.score", "student.score")
+    
+    ## Select cols to models
+    dev.data <- dev.data %>%
+        dplyr::select( dplyr::one_of( cols.pred ))
+    
     split.list <- RAoPDataEngineer_SplitData(dev.data) ## <= list(train.data, val.data)
 
     return(split.list)
@@ -184,9 +218,11 @@ RAoPDataEngineer_SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
 RAoPDataEngineer_PreProcessNewData <- function(newdata.df,sent.dict,narrative.dict,
                                                raop.settings){
     
+    ##newdata.df$requester_received_pizza <- as.numeric(newdata.df$requester_received_pizza)
+    
     new.data <- RAoPDataEngineer_BuildNewFeatures(newdata.df, sent.dict,
                                                   narrative.dict)
-
+    
     ## Select target cols
     new.data <- new.data %>%
         dplyr::select( dplyr::one_of( raop.settings$cols_target ))
