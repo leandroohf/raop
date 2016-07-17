@@ -11,7 +11,7 @@ RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
                                                     raop.settings$cols_target)
 
     data.split.list <- RAoPDataEngineer_DesignData( raop.target,
-                                                   raop.settings$cols_to_tranform)
+                                                   raop.settings)
     
     train.data      <- data.split.list[[1]]
     val.data        <- data.split.list[[2]]
@@ -127,7 +127,7 @@ RAoPDataEngineer_BuildTextFeatures <- function(raop.df, sent.dict, narrative.dic
     return(raop.df)
 }
 
-RAoPDataEngineer_DesignData <- function(raop.target, cols_to_transform){
+RAoPDataEngineer_DesignData <- function(raop.target, raop.settings){
         
     dev.data <- RAoPDataEngineer_BalanceDataClass(raop.target)
 
@@ -135,18 +135,12 @@ RAoPDataEngineer_DesignData <- function(raop.target, cols_to_transform){
     ## train phase for new data. So I need to pass a reference !?
     ## This is a temp solution. I am wasting memory and performance
     ## but reducing implementation cost
-    dev.data   <- RAoPDataEngineer_TransformNumericalVars(dev.data,dev.data, cols_to_transform)
-
-    cols.pred <- c("requester_account_age_in_days_at_request", 
-                   "requester_received_pizza", 
-                   "requester_upvotes_minus_downvotes_at_request",
-                   "nword", "has.link", "first.half.of.month", "posted.raop.before", 
-                   "post.sent", "is.weekend", "desire.score", "family.score", "job.score", 
-                   "money.score", "student.score")
+    dev.data   <- RAoPDataEngineer_TransformNumericalVars(dev.data,dev.data,
+                                                          raop.settings$cols_to_transform)
     
-    ## Select cols to models
+    ## Select cols to models investigation
     dev.data <- dev.data %>%
-        dplyr::select( dplyr::one_of( cols.pred ))
+        dplyr::select( dplyr::one_of( raop.settings$cols_model_investigation ))
     
     split.list <- RAoPDataEngineer_SplitData(dev.data) ## <= list(train.data, val.data)
 
