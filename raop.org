@@ -165,6 +165,17 @@
     p <- ggplot(data.view, aes(x=reciprocity,y=success_rate)) + geom_bar(stat = 'identity') 
 
     summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
+
+    ## =================================
+    ## nword
+
+    p <- ggplot(data.target, aes(x=requester_received_pizza,y=nword)) +
+        geom_boxplot()
+
+    p <- ggplot(data.target, aes(x=nword,)) +
+        geom_histogram(binwidth = 1) + facet_grid(requester_received_pizza ~ . )
+
+    summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
   #+END_SRC
 
 
