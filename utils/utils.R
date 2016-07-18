@@ -62,8 +62,8 @@ GetPostSentimentScore <- function(post.terms, pos, neg){
 
     stopifnot( typeof(post.terms) == "character")
 
-    pos.score <- sum(!is.na(match(post.terms,pos)))
-    neg.score <- sum(!is.na(match(post.terms,neg)))
+    pos.score <- sum(!is.na(match(post.terms,pos)))/length(pos)
+    neg.score <- sum(!is.na(match(post.terms,neg)))/length(neg)
     sent.score <- pos.score - neg.score
 
     return(sent.score)
