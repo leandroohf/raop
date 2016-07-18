@@ -8,7 +8,7 @@ RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
     
     raop.target <- RAoPDataEngineer_BuildDataTarget(raop.df, sent.dict,
                                                     narrative.dict,
-                                                    raop.settings$cols_target)
+                                                    raop.settings)
 
     data.split.list <- RAoPDataEngineer_DesignData( raop.target,
                                                    raop.settings)
@@ -35,8 +35,8 @@ RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
 }
 
 RAoPDataEngineer_BuildDataTarget <- function(raop.df, sent.dict, narrative.dict,
-                                             cols.target){
-
+                                             raop.settings){
+    
     ## Defensive programming
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
 
@@ -44,12 +44,19 @@ RAoPDataEngineer_BuildDataTarget <- function(raop.df, sent.dict, narrative.dict,
 
     raop.df <- RAoPDataEngineer_BuildNewFeatures(raop.df, sent.dict, narrative.dict)
 
-    ## TODO Sent it to settings.json (Configure, do not integrate )
-    cat("Selecting target vars... \n")
+    ## Convert
+    cat("Convert numerical vars to decile...\n")
+    print(raop.settings$cols_to_transform)
+    raop.df <- RAoPDataEngineer_ConvertToDecile(raop.df,raop.df,
+                                                raop.settings$cols_to_transform)
     
-    raop.target <- raop.df %>%
-        dplyr::select( dplyr::one_of( cols.target ))
 
+    
+    cat("Selecting target vars... \n")    
+    raop.target <- raop.df %>%
+        dplyr::select( dplyr::one_of( raop.settings$cols_target ))
+    
+    
     return(raop.target)
 }
 
@@ -79,8 +86,6 @@ RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict
     cat("Text engineering...\n")
     raop.df <- RAoPDataEngineer_BuildTextFeatures(raop.df, sent.dict, narrative.dict)
 
-    cat("Convert numerical vars to decile...\n")
-    
     return(raop.df)
 }
 
@@ -124,6 +129,21 @@ RAoPDataEngineer_BuildTextFeatures <- function(raop.df, sent.dict, narrative.dic
                                                           narrative.dict$student)
     
     return(raop.df)
+}
+
+RAoPDataEngineer_ConvertToDecile <- function(dev.data,ref.data, cols.to.transform){
+
+    cat('inside deciles\n' )
+    cat(cols.to.transform)
+    ## XXX If start to become slow, optimize it
+    for( cc in cols.to.transform ){
+        cat(cc,"...\n")
+        x              <- unlist((dev.data[, cc]))
+        decile.x       <- quantile(ref.data[, cc], seq(0, .9, .1))
+        dev.data[, cc] <- ConvertToDecile( x, decile.x )
+    }
+    
+    return(dev.data)
 }
 
 RAoPDataEngineer_DesignData <- function(raop.target, raop.settings){
@@ -178,8 +198,6 @@ RAoPDataEngineer_BalanceDataClass <- function(raop.target){
 
 RAoPDataEngineer_TransformNumericalVars <- function(dev.data, train.data, cols_to_transform){
 
-    ## TODO Pass cols to transform as args
-    ## Tranforms vars (Estah gerando BUG no predictor)
     cat("Mapping numerical columns to 0 - 1 range ... \n")
 
     ## XXX If start to become slow, optimize it

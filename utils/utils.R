@@ -53,7 +53,6 @@ GetDocTermFreq <- function(corpus){
     return(term.freq)
 }
 
-
 TokenizeCorpusElement <- function(x){
 
     return(unlist(stri_extract_all_words(as.character(x))))
@@ -86,7 +85,7 @@ GetSentimentScoreFromCorpus <- function(raop.corpus, pos, neg){
 
 GetNarrativesScoreFromCorpus <- function(raop.corpus, narrative.words){
     
-    number.of.posts <- length(raop.corpus)
+    number.of.posts  <- length(raop.corpus)
     narrative.score  <- numeric(number.of.posts)
     nwords <- length(narrative.words)
     
@@ -110,7 +109,7 @@ ConvertToDecile <- function(x, decile_x = NULL){
 
     assert_that(is.numeric(x))
     
-    if( exists("decile__x") == FALSE){
+    if( exists("decile_x") == FALSE){
         decile_x <- quantile(x, seq(0, .9, .1))
     }
     xdc <- findInterval(x, decile_x)
