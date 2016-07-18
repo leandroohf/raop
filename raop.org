@@ -117,6 +117,30 @@
     p <- ggplot(data.view, aes(x=post_sent,y=success_rate)) + geom_line()
 
     summary(aov(requester_received_pizza ~ post.sent , data.target))
+
+    ## =================================
+    ## has poste before
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( posted.raop.before) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("posted_before")
+    p <- ggplot(data.view, aes(x=posted_before,y=success_rate)) + geom_bar(stat = 'identity') 
+
+    summary(aov(requester_received_pizza ~ posted.raop.before , data.target)) 
+
+    ## =================================
+    ## has link
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( has.link) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("has_link")
+    p <- ggplot(data.view, aes(x=has_link,y=success_rate)) + geom_bar(stat = 'identity') 
+
+    summary(aov(requester_received_pizza ~ has.link , data.target)) 
   #+END_SRC
 
 
