@@ -29,6 +29,7 @@
   plot graphs that I found on Rpubs
 
   #+BEGIN_SRC R :session :tangle exp.R
+
     data.view <- data.target %>%
         dplyr::group_by( requester_upvotes_minus_downvotes_at_request ) %>%
         dplyr::summarise(  success_rate = sum( requester_received_pizza )/ n(),
@@ -40,17 +41,39 @@
     p <- ggplot(data.view, aes(x=karma,y=success_rate)) + geom_line() +
         geom_point(aes(size=exp(account_age)))
 
+    ## =================================
+    ## account age
+    p <- ggplot(data.view, aes(x=account_age,y=success_rate)) + geom_line()
 
-    p <- ggplot(data.view, aes(x=account_age,y=success_rate)) + geom_line() +
-    
-
-
+    ## =================================
+    ## community age
     data.view <- data.target %>%
         dplyr::group_by( community_age ) %>%
         dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
 
     names(data.view)[1] <- c("community_age")
     p <- ggplot(data.view, aes(x=community_age,y=success_rate)) + geom_line()
+
+    ## =================================
+    ## first half of the month 
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( first.half.of.month ) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("first_half")
+    p <- ggplot(data.view, aes(x=first_half,y=success_rate)) + geom_bar(stat = 'identity')
+
+
+    ## =================================
+    ## is weekend
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( is.weekend ) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("is_weekend")
+    p <- ggplot(data.view, aes(x=is_weekend,y=success_rate)) + geom_bar(stat = 'identity')
 
   #+END_SRC
 
