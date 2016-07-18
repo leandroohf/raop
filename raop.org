@@ -106,6 +106,16 @@
     names(data.view)[1] <- c("week_day")
     p <- ggplot(data.view, aes(x=week_day,y=success_rate)) + geom_bar(stat = 'identity')
 
+    ## =================================
+    ## post sent
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( post.sent) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("post_sent")
+    p <- ggplot(data.view, aes(x=post_sent,y=success_rate)) + geom_line()
+
   #+END_SRC
 
 * Model development
