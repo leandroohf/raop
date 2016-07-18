@@ -64,6 +64,8 @@
     names(data.view)[1] <- c("first_half")
     p <- ggplot(data.view, aes(x=first_half,y=success_rate)) + geom_bar(stat = 'identity')
 
+    summary(aov(  requester_received_pizza ~ first.half.of.month, data.target ))
+
     ## =================================
     ## is weekend
     data.view <- data.target %>%
@@ -83,6 +85,26 @@
 
     names(data.view)[1] <- c("month")
     p <- ggplot(data.view, aes(x=month,y=success_rate)) + geom_bar(stat = 'identity')
+
+    ## =================================
+    ## month day
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( lubridate::mday(request.date)) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("month_day")
+    p <- ggplot(data.view, aes(x=month_day,y=success_rate)) + geom_bar(stat = 'identity')
+
+    ## =================================
+    ## week day
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( lubridate::wday(request.date)) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("week_day")
+    p <- ggplot(data.view, aes(x=week_day,y=success_rate)) + geom_bar(stat = 'identity')
 
   #+END_SRC
 
