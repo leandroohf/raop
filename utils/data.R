@@ -76,8 +76,6 @@ RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict
     cat("Features engineering...\n")
     raop.df$nword <- str_count(raop.df[,"request_text"], "\\S+")
 
-    raop.df$has.link           <- str_detect( raop.df[,"request_text"], "https?://")
-    ##raop.df$has.link           <-  as.numeric(raop.df$has.link)
     raop.df$posted.raop.before <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
     ##raop.df$posted.raop.before <- as.numeric(raop.df$posted.raop.before)
     
@@ -104,7 +102,18 @@ RAoPDataEngineer_BuildTimeFeatures <- function(raop.df){
 }
 
 RAoPDataEngineer_BuildTextFeatures <- function(raop.df, sent.dict, narrative.dict){
+
+
+    raop.df$gratitude <- str_detect( raop.df[,"request_text"],
+                                    "thank|appreciate|advance")
+
+
+    raop.df$reciprocity <- str_detect( raop.df[,"request_text"],
+                                      "pay.+forward|pay.+back|return.+favor|repay")
     
+    
+    raop.df$has.link           <- str_detect( raop.df[,"request_text"], "https?://")
+
     raop.corpus       <- GetCleanedCorpus(raop.df$request_text)
 
     ## Sentiment score
