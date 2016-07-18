@@ -27,7 +27,7 @@
 * Exploratory
 
   plot graphs that I found on Rpubs
-
+  
   #+BEGIN_SRC R :session :tangle exp.R
 
     data.view <- data.target %>%
@@ -116,7 +116,9 @@
     names(data.view)[1] <- c("post_sent")
     p <- ggplot(data.view, aes(x=post_sent,y=success_rate)) + geom_line()
 
+    summary(aov(requester_received_pizza ~ post.sent , data.target))
   #+END_SRC
+
 
 * Model development
 
