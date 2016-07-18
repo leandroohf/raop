@@ -31,22 +31,22 @@
   #+BEGIN_SRC R :session :tangle exp.R
     data.view <- data.target %>%
         dplyr::group_by( requester_upvotes_minus_downvotes_at_request ) %>%
-        dplyr::summarise(  sucess_rate = sum( requester_received_pizza )/ n(),
+        dplyr::summarise(  success_rate = sum( requester_received_pizza )/ n(),
                          account_age = mean(requester_account_age_in_days_at_request))
 
     names(data.view)[1] <- c("karma")
-    p <- ggplot(data.view, aes(x=karma,y=sucess_rate)) + geom_line() +
+    p <- ggplot(data.view, aes(x=karma,y=success_rate)) + geom_line() +
         geom_point(aes(size=account_age))
 
-    p <- ggplot(data.view, aes(x=karma,y=sucess_rate)) + geom_line() +
+    p <- ggplot(data.view, aes(x=karma,y=success_rate)) + geom_line() +
         geom_point(aes(size=exp(account_age)))
 
     data.view <- data.target %>%
-        dplyr::group_by( requester_account_age_in_days_at_request ) %>%
-        dplyr::summarise(  sucess_rate = sum( requester_received_pizza )/ n())
+        dplyr::group_by( community_age ) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
 
     names(data.view)[1] <- c("community_age")
-    p <- ggplot(data.view, aes(x=community_age,y=sucess_rate)) + geom_line()
+    p <- ggplot(data.view, aes(x=community_age,y=success_rate)) + geom_line()
 
   #+END_SRC
 
