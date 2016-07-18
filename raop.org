@@ -141,6 +141,30 @@
     p <- ggplot(data.view, aes(x=has_link,y=success_rate)) + geom_bar(stat = 'identity') 
 
     summary(aov(requester_received_pizza ~ has.link , data.target)) 
+
+    ## =================================
+    ## gratitude
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( gratitude) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("gratitude")
+    p <- ggplot(data.view, aes(x=gratitude,y=success_rate)) + geom_bar(stat = 'identity') 
+
+    summary(aov(requester_received_pizza ~ gratitude , data.target)) 
+
+    ## =================================
+    ## reciprocity
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( reciprocity) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("reciprocity")
+    p <- ggplot(data.view, aes(x=reciprocity,y=success_rate)) + geom_bar(stat = 'identity') 
+
+    summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
   #+END_SRC
 
 
