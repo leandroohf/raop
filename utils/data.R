@@ -94,10 +94,10 @@ RAoPDataEngineer_BuildTimeFeatures <- function(raop.df){
     raop.df$request.date   <- as.Date(as.POSIXct(raop.df[,"unix_timestamp_of_request"],
                                                  origin="1970-01-01", tz = "UTC"))
     raop.df$community_age         <- as.numeric(raop.df$request.date - as.Date('2010-12-08'))
-    
-    raop.df$first.half.of.month <- (lubridate::day(raop.df$request.date) < 16)
+
+    raop.df$first.half.of.month   <- (lubridate::day(raop.df$request.date) < 16)
     ##raop.df$first.half.of.month <- as.numeric(raop.df$first.half.of.month)
-    raop.df$is.weekend          <- (lubridate::wday(raop.df$request.date) %in%  c(1,6,7))
+    raop.df$is.weekend            <- (lubridate::wday(raop.df$request.date) %in%  c(1,6,7))
     ##raop.df$is.weekend          <-  as.numeric(raop.df$is.weekend)
     
     return(raop.df)
