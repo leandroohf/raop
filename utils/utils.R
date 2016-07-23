@@ -92,7 +92,8 @@ GetNarrativesScoreFromCorpus <- function(raop.corpus, narrative.words){
     for( k in (1:number.of.posts)){
         post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
         ## post score = count the number of shared  words
-        narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/nwords
+        ## narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/nwords
+        narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/length(post.terms)
     }
     
     return(narrative.score)
