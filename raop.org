@@ -92,15 +92,40 @@
     p
 
     ## =================================
-    ## money score
-    data.view <- data.target %>%
-        na.omit() %>%
+    ## narrative score
+    cols.narratives <- c("desire.score",
+                         "family.score",
+                         "job.score",
+                         "money.score",
+                         "student.score")
 
-        dplyr::group_by( money.score) %>%
-        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+    data.view0 <- data.target %>%
+        dplyr::select( dplyr::one_of( c(cols.narratives,
+                                        "requester_received_pizza")))
 
-    names(data.view)[1] <- c("money_score")
-    p <- ggplot(data.view, aes(x=money_score,y=success_rate)) + geom_line()
+    data.view <- data.frame(decile=integer(),
+                            success_rate=double(),
+                            narrative=character())
+
+    for ( narrative in cols.narratives){
+    
+        narrative.view <- data.view0 %>%
+            na.omit() %>%
+            dplyr::group_by_( narrative ) %>%
+            dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())  %>%
+            dplyr::mutate(narrative)
+    
+        names(narrative.view)[1] <- "decile" 
+    
+        data.view <- rbind(data.view, narrative.view)
+    }
+
+    p <- ggplot(data.view, aes(x = decile, y = success_rate, colour = narrative, group = narrative)) +
+        geom_line() + ggtitle('Success rate vs. narrative') +
+        scale_x_continuous(breaks = seq(0, 10, 1), name = 'Narrative declie') +
+        scale_y_continuous(name = 'Success rate')
+
+
     p
 
   #+END_SRC
