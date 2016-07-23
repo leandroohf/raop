@@ -1,6 +1,5 @@
 
 
-
 * Introduction
 
   Eu vou basear bem no Rpub
@@ -11,17 +10,41 @@
   * Discuss a little about article reference
   * Discuss what we decided to do n why
 
-
 * Data
 
   * Explain what I did in descriptive
 
-    We select the variable in the target data frame below for the exploratory analysis 
+    We select the variable in the target data frame below for the
+    exploratory analysis
+    
+  #+BEGIN_SRC R :session :tangle raop.R :results none
+    ##* ****************************************************************
+    ##  Programmer[s]: Leandro Fernandes
+    ##  Company/Institution:
+    ##  email: leandroohf@gmail.com
+    ##  Date: June 20, 2016
+    ##  
+    ##  The author believes that share code and knowledge is awesome.
+    ##  Feel free to share and modify this piece of code. But don't be
+    ##  impolite and remember to cite the author and give him his credits.
+    ##* ****************************************************************
 
+    library(jsonlite, quietly = TRUE )
+    library(feather, quietly = TRUE )
+    library(ggplot2, quietly = TRUE )
+    library(grid)
+    library(gridExtra)
+    library(ggthemes)
 
-  #+BEGIN_SRC 
-  data.target <- raop.engineer$GetDataTarget()
-  names(data.target)
+    source("./utils/data.R")
+    source("./utils/utils.R")
+
+    settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
+
+    cat('Loading data engineer...\n')
+    raop.engineer <- readRDS(settings$data_engineer_path)
+
+    data.target <- raop.engineer$GetDataTarget()
   #+END_SRC
 
 * Exploratory
@@ -29,21 +52,17 @@
   plot graphs that I found on Rpubs
   
   #+BEGIN_SRC R :session :tangle exp.R
-
     data.view <- data.target %>%
         dplyr::group_by( requester_upvotes_minus_downvotes_at_request ) %>%
         dplyr::summarise(  success_rate = sum( requester_received_pizza )/ n(),
                          account_age = mean(requester_account_age_in_days_at_request))
 
     names(data.view)[1] <- c("karma")
-    p <- ggplot(data.view, aes(x=karma,y=success_rate)) + geom_line()
-
-    p <- ggplot(data.view, aes(x=karma,y=success_rate)) + geom_line() +
-        geom_point(aes(size=exp(account_age)))
+    p.karma <- ggplot(data.view, aes(x=karma,y=success_rate)) + geom_line()
 
     ## =================================
     ## account age
-    p <- ggplot(data.view, aes(x=account_age,y=success_rate)) + geom_line()
+    p.account.age <- ggplot(data.view, aes(x=account_age,y=success_rate)) + geom_line()
 
     ## =================================
     ## community age
@@ -52,8 +71,41 @@
         dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
 
     names(data.view)[1] <- c("community_age")
-    p <- ggplot(data.view, aes(x=community_age,y=success_rate)) + geom_line()
+    p.community.age <- ggplot(data.view, aes(x=community_age,y=success_rate)) + geom_line()
 
+    grid.arrange(p.karma, p.account.age, p.community.age, ncol = 3)
+
+  #+END_SRC
+  
+  *Um pto que fiz diferente* Entao eu devo colocar separado.
+  
+  #+BEGIN_SRC R :session :tangle exp.R
+    ## =================================
+    ## post sent
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( post.sent) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("post_sent")
+    p <- ggplot(data.view, aes(x=post_sent,y=success_rate)) + geom_line()
+    p
+
+    ## =================================
+    ## money score
+    data.view <- data.target %>%
+        na.omit() %>%
+
+        dplyr::group_by( money.score) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("money_score")
+    p <- ggplot(data.view, aes(x=money_score,y=success_rate)) + geom_line()
+    p
+
+  #+END_SRC
+
+  #+BEGIN_SRC R :session :tangle exp.R
     ## =================================
     ## first half of the month 
     data.view <- data.target %>%
@@ -107,19 +159,7 @@
     p <- ggplot(data.view, aes(x=week_day,y=success_rate)) + geom_bar(stat = 'identity')
 
     ## =================================
-    ## post sent
-    data.view <- data.target %>%
-        na.omit() %>%
-        dplyr::group_by( post.sent) %>%
-        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
-
-    names(data.view)[1] <- c("post_sent")
-    p <- ggplot(data.view, aes(x=post_sent,y=success_rate)) + geom_line()
-
-    summary(aov(requester_received_pizza ~ post.sent , data.target))
-
-    ## =================================
-    ## has poste before
+    ## has posted before
     data.view <- data.target %>%
         na.omit() %>%
         dplyr::group_by( posted.raop.before) %>%
@@ -177,7 +217,6 @@
 
     summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
   #+END_SRC
-
 
 * Model development
 
