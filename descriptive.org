@@ -1,158 +1,263 @@
 
 
+* Data description
 
-* Intro
+  data was download from: 
+  * web page: https://snap.stanford.edu/data/web-RedditPizzaRequests.html
+  * download: http://cs.stanford.edu/~althoff/raop-dataset/pizza_request_dataset.tar.gz
 
-  Objetivos:
-  * Investigar missings
-  * Investigar outliers (boxplot)
-  * Investigar data distrubutions (hsitograms)
-  * contar classes
-  * mostrar probabilidade no tempo (por mes ou mesmo por ano)
+  * raw data: raop.df
+    * # vars:
+      * #cat vars
+      * #num vars
+    * #rows (post):
+    * #users:
+    * Response var: requester_received_pizza
+  * data target: 
+    * #time
+    * #text
+    * #cat
+    * #num
+      
+  Main data issues:
+  * skewness data
+  * Missing: in_test_set (drop this var it is not important)
+  * Un balanced class:
 
-  Apenas tomar nota para depois citar e mostrar model_dev.org
+* Load data n functions
+  
+  #+BEGIN_SRC R :session :tangle descriptive.R :results none
+    ##* ****************************************************************
+    ##  Programer[s]: Leandro Fernandes
+    ##  Company/Institution:
+    ##  email: leandroohf@gmail.com
+    ##  Date: June 18, 2016
+    ##
+    ##  The author believes that share code and knowledge is awesome.
+    ##  Feel free to share and modify this piece of code. But don't be
+    ##  impolite and remember to cite the author and give him his credits.
+    ##* ****************************************************************
 
-* Load
+    library(feather, quietly = TRUE )
+    library(ggplot2, quietly = TRUE )
+    library(wordcloud, quietly = TRUE )
+    library(gridExtra, quietly = TRUE )
+    library(dplyr, quietly = TRUE )
+    library(jsonlite, quietly = TRUE )
 
-#+BEGIN_SRC R :session :tangle descriptive.R
-##* ****************************************************************
-##  Programer[s]: Leandro Fernandes
-##  Company/Institution:
-##  email: leandroohf@gmail.com
-##  Date: June 18, 2016
-##
-##  The author believes that share code and knowledge is awesome.
-##  Feel free to share and modify this piece of code. But don't be
-##  impolite and remember to cite the author and give him his credits.
-##* ****************************************************************
+    source("./utils/utils.R")
+    source("./utils/features_selection.R")
 
-library(feather, quietly = TRUE )
-library(ggplot2, quietly = TRUE )
-library(wordcloud, quietly = TRUE )
-library(gridExtra, quietly = TRUE )
-library(dplyr, quietly = TRUE )
-library(jsonlite, quietly = TRUE )
+    settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
 
-source("./utils/utils.R")
-source("./utils/features_selection.R")
+    cat("Loading raw data...\n")
+    raop.df     <- fromJSON( settings$data_raw_path, flatten=TRUE)
 
-settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
+    cat('Loading data engineer...\n')
+    raop.engineer <- readRDS(settings$data_engineer_path)
 
-raop.target <- read_feather( settings$data_target_path)
-
+    data.target <- raop.engineer$GetDataTarget()
 #+END_SRC
 
-#+RESULTS:
+* Raw data summary
 
-* Summary variables
-
-  *Numerical variables*
+  Discover what I have in my data:
 
   #+BEGIN_SRC R :session :tangle descriptive.R
-    cols.num <- c("requester_received_pizza",
-                  "requester_account_age_in_days_at_request",
-                  "requester_days_since_first_post_on_raop_at_request",
-                  "requester_number_of_posts_at_request",
-                  "requester_number_of_posts_on_raop_at_request",
-                  "requester_upvotes_minus_downvotes_at_request",
-                  "nword",
-                  "post.sent",
-                  "desire.score","family.score",
-                  "job.score", "money.score","student.score")
-
-    print(summary(raop.target[,cols.num]))
-
+    print(names(raop.df))
   #+END_SRC
 
   #+RESULTS:
-  : TRUE
+  | giver_username_if_known                              |
+  | in_test_set                                          |
+  | number_of_downvotes_of_request_at_retrieval          |
+  | number_of_upvotes_of_request_at_retrieval            |
+  | post_was_edited                                      |
+  | request_id                                           |
+  | request_number_of_comments_at_retrieval              |
+  | request_text                                         |
+  | request_text_edit_aware                              |
+  | request_title                                        |
+  | requester_account_age_in_days_at_request             |
+  | requester_account_age_in_days_at_retrieval           |
+  | requester_days_since_first_post_on_raop_at_request   |
+  | requester_days_since_first_post_on_raop_at_retrieval |
+  | requester_number_of_comments_at_request              |
+  | requester_number_of_comments_at_retrieval            |
+  | requester_number_of_comments_in_raop_at_request      |
+  | requester_number_of_comments_in_raop_at_retrieval    |
+  | requester_number_of_posts_at_request                 |
+  | requester_number_of_posts_at_retrieval               |
+  | requester_number_of_posts_on_raop_at_request         |
+  | requester_number_of_posts_on_raop_at_retrieval       |
+  | requester_number_of_subreddits_at_request            |
+  | requester_received_pizza                             |
+  | requester_subreddits_at_request                      |
+  | requester_upvotes_minus_downvotes_at_request         |
+  | requester_upvotes_minus_downvotes_at_retrieval       |
+  | requester_upvotes_plus_downvotes_at_request          |
+  | requester_upvotes_plus_downvotes_at_retrieval        |
+  | requester_user_flair                                 |
+  | requester_username                                   |
+  | unix_timestamp_of_request                            |
+  | unix_timestamp_of_request_utc                        |
 
-  * Categorical varaibles*
+  Split for better print.
 
-  #+BEGIN_SRC R :session :tangle descriptive.R
-    cols.cat <- c("in_test_set","request_id",
-                  "requester_received_pizza",
-                  "requester_username", "has.link",
-                  "request.date", "first.half.of.month",
-                  "posted.raop.before")
+  First 15th
 
-    print(summary(raop.target[,cols.cat]))
+   #+BEGIN_SRC R :session :tangle descriptive.R :results none
+     print(summary(raop.df[,1:15]))
+   #+END_SRC
+   
+   #+BEGIN_SRC R :session :tangle descriptive.R :results none
+     print(summary(raop.df[,15:33]))
+   #+END_SRC
 
-  #+END_SRC
+* Data target Summary
+** Response var 
+   
+   #+BEGIN_SRC R :session :tangle descriptive.R :results output
+     print(summary(raop.df[,"requester_received_pizza"]))
+   #+END_SRC
+
+** Time features
+
+   #+BEGIN_SRC R
+     cols.time <- c("requester_account_age_in_days_at_request",
+                    "requester_days_since_first_post_on_raop_at_request",
+                    "community_age",
+                    "request.date", "first.half.of.month",
+                    "posted.raop.before"
+                    )
+
+     print(summary(data.target[,cols.time]))
+   #+END_SRC
+
+** Text features
+
+      #+BEGIN_SRC R :session :tangle descriptive.R
+        cols.text <- c("requester_username", 
+                       "nword",
+                       "has.link", "gratitude", "reciprocity",
+                       "post.sent",
+                       "desire.score", "family.score", "job.score", 
+                       "money.score", "student.score")
+
+        print(summary(data.target[,cols.text]))
+
+   #+END_SRC
+
+** Status features 
+
+   #+BEGIN_SRC R
+     cols.status <- c("requester_number_of_posts_on_raop_at_request",
+                      "requester_upvotes_minus_downvotes_at_request",
+                      "posted.raop.before")
+
+     print(summary(data.target[,cols.status]))
+   #+END_SRC
 
 * Data Explorer
+** Numerical
+   #+BEGIN_SRC R :session :tangle descriptive.R
+     cols.num <- c( "requester_received_pizza",
+                   "requester_account_age_in_days_at_request",
+                   "requester_days_since_first_post_on_raop_at_request",
+                   "requester_number_of_posts_at_request",
+                   "requester_number_of_posts_on_raop_at_request",
+                   "requester_upvotes_minus_downvotes_at_request",
+                   "nword",
+                   "community_age",
+                   "post.sent",
+                   "desire.score","family.score",
+                   "job.score", "money.score",
+                   "student.score")
 
-  #+BEGIN_SRC R :session :tangle descriptive.R
-    data.view <- raop.target[,cols.num]
-    names(data.view) <- paste0("x",as.character(seq(1:ncol(data.view))))
-    data.exp <- DataExplorer(data.view ,"x1")
-    data.exp$GetCorrDashBoard()
-    data.exp$GetHistogramDashBoard()
+     data.view <- data.target[,cols.num]
 
-  #+END_SRC
+     short.names      <- paste0("x",as.character(seq(1:ncol(data.view))))
+     names(data.view) <- short.names
+     data.exp <- DataExplorer(data.view ,"x1")
+
+     data.exp$GetCorrDashBoard()
+     data.exp$GetHistogramDashBoard()
+
+   #+END_SRC
+
+   
+   #+BEGIN_SRC R
+     p <- ggplot(data.target, aes(x = requester_received_pizza, y = nword)) +
+         geom_boxplot(fill = '#ffffcc') +
+         ggtitle('Success rate vs. request length') +
+         scale_x_discrete(limits = c('TRUE', 'FALSE'), labels = c('Success', 'Fail'),
+                          name = 'Request outcome') +
+         scale_y_continuous(name = 'Requent length (in 100 words)')
+
+     print(p)
+   #+END_SRC
+
+** Text
+
+   #+BEGIN_SRC R :session :tangle descriptive.R
+
+     ## Text analysis
+     pizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == TRUE)
+
+     nopizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == FALSE)
+
+     pizza.corpus   <- GetCleanedCorpus(pizza.df$request_text)
+     nopizza.corpus <- GetCleanedCorpus(nopizza.df$request_text)
+
+     pizza.term.freq <- GetDocTermFreq(pizza.corpus)
+     nopizza.term.freq <- GetDocTermFreq(nopizza.corpus)
+
+     set.seed(142)
+     opar <- par() ## copy defaults
+     par(mfrow=c(1,2))
+
+     ## 33% most often words
+     wordcloud(names(pizza.term.freq), pizza.term.freq, min.freq=100,
+               scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+     text(x=0.5, y=1.1, "pizza")
+
+     wordcloud(names(nopizza.term.freq), nopizza.term.freq, min.freq=250,
+               scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+     text(x=0.5, y=1.1, "no pizza")
+     par(opar) ## reset defaults
+
+     nw <- 21
+     pizza.data.view <- data.frame(word=names(pizza.term.freq[1:nw]),
+                                   freq=pizza.term.freq[1:nw],
+                                   row.names = NULL)
+
+     pizza.data.view$word <-
+         factor( pizza.data.view$word,
+                levels=pizza.data.view[order(pizza.data.view$freq), "word"])
 
 
-* Text explorer
+     p.left <- ggplot(pizza.data.view, aes(x=word, y=freq)) + 
+         geom_bar(stat="identity") + 
+         coord_flip() + ggtitle("pizza")
 
-  #+BEGIN_SRC R :session :tangle descriptive.R
+     nopizza.data.view <- data.frame(word=names(nopizza.term.freq[1:nw]),
+                                     freq=nopizza.term.freq[1:nw],
+                                     row.names = NULL)
 
-    ## Text analysis
-    pizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == TRUE)
+     nopizza.data.view$word <-
+         factor( nopizza.data.view$word,
+                levels=nopizza.data.view[order(nopizza.data.view$freq), "word"])
 
-    nopizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == FALSE)
+     p.right <- ggplot(nopizza.data.view, aes(x=word, y=freq)) + 
+         geom_bar(stat="identity") + 
+         coord_flip() + ggtitle("no pizza")
 
-    pizza.corpus   <- GetCleanedCorpus(pizza.df$request_text)
-    nopizza.corpus <- GetCleanedCorpus(nopizza.df$request_text)
+     grid.arrange (p.left, p.right, ncol=2)
 
-    pizza.term.freq <- GetDocTermFreq(pizza.corpus)
-    nopizza.term.freq <- GetDocTermFreq(nopizza.corpus)
-
-    set.seed(142)
-    opar <- par() ## copy defaults
-    par(mfrow=c(1,2))
-
-    ## 33% most often words
-    wordcloud(names(pizza.term.freq), pizza.term.freq, min.freq=100,
-              scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
-    text(x=0.5, y=1.1, "pizza")
-
-    wordcloud(names(nopizza.term.freq), nopizza.term.freq, min.freq=250,
-              scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
-    text(x=0.5, y=1.1, "no pizza")
-    par(opar) ## reset defaults
-
-    nw <- 21
-    pizza.data.view <- data.frame(word=names(pizza.term.freq[1:nw]),
-                                  freq=pizza.term.freq[1:nw],
-                                  row.names = NULL)
-
-    pizza.data.view$word <-
-        factor( pizza.data.view$word,
-               levels=pizza.data.view[order(pizza.data.view$freq), "word"])
-
-
-    p.left <- ggplot(pizza.data.view, aes(x=word, y=freq)) + 
-        geom_bar(stat="identity") + 
-        coord_flip() + ggtitle("pizza")
-
-    nopizza.data.view <- data.frame(word=names(nopizza.term.freq[1:nw]),
-                                    freq=nopizza.term.freq[1:nw],
-                                    row.names = NULL)
-
-    nopizza.data.view$word <-
-        factor( nopizza.data.view$word,
-               levels=nopizza.data.view[order(nopizza.data.view$freq), "word"])
-
-    p.right <- ggplot(nopizza.data.view, aes(x=word, y=freq)) + 
-        geom_bar(stat="identity") + 
-        coord_flip() + ggtitle("no pizza")
-
-    grid.arrange (p.left, p.right, ncol=2)
-
-  #+END_SRC
+   #+END_SRC
 
 * Outliers 
 
   Para justificar os cortes
 
-  * POsso tentar Box cox tranformation
+  * Posso tentar Box cox tranformation
