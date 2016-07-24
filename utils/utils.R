@@ -60,11 +60,14 @@ TokenizeCorpusElement <- function(x){
 
 GetPostSentimentScore <- function(post.terms, pos, neg){
 
+    ## Sentiment post normailized by length of the dict and post
+    
     stopifnot( typeof(post.terms) == "character")
-
-    pos.score <- sum(!is.na(match(post.terms,pos)))/length(pos)
-    neg.score <- sum(!is.na(match(post.terms,neg)))/length(neg)
-    sent.score <- pos.score - neg.score
+    nwords <- length(narrative.words)
+    
+    pos.score <- sum(!is.na(match(post.terms,pos)))/length(pos)/length(post.terms)
+    neg.score <- sum(!is.na(match(post.terms,neg)))/length(neg)/length(post.terms)
+    sent.score <- (pos.score - neg.score)/nwords
 
     return(sent.score)
 }
@@ -87,12 +90,10 @@ GetNarrativesScoreFromCorpus <- function(raop.corpus, narrative.words){
     
     number.of.posts  <- length(raop.corpus)
     narrative.score  <- numeric(number.of.posts)
-    nwords <- length(narrative.words)
-    
+
     for( k in (1:number.of.posts)){
         post.terms <- TokenizeCorpusElement(raop.corpus[[k]])
         ## post score = count the number of shared  words
-        ## narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/nwords
         narrative.score[k]  <- sum(!is.na(match(post.terms,narrative.words)))/length(post.terms)
     }
     
