@@ -261,6 +261,7 @@
 
     names(data.view)[1] <- c("nword")
     p <- ggplot(data.view, aes(x=nword,y=success_rate)) + geom_line()
+    p
   #+END_SRC
 
 * Model development
