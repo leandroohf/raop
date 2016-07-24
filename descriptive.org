@@ -199,17 +199,20 @@
 
 ** Text
 
+
+   See words with frquency greather than 100
+
    #+BEGIN_SRC R :session :tangle descriptive.R
 
      ## Text analysis
-     pizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == TRUE)
+     pizza.df <- data.target %>% dplyr::filter(requester_received_pizza == TRUE)
 
-     nopizza.df <- raop.target %>% dplyr::filter(requester_received_pizza == FALSE)
+     nopizza.df <- data.target %>% dplyr::filter(requester_received_pizza == FALSE)
 
      pizza.corpus   <- GetCleanedCorpus(pizza.df$request_text)
      nopizza.corpus <- GetCleanedCorpus(nopizza.df$request_text)
 
-     pizza.term.freq <- GetDocTermFreq(pizza.corpus)
+     pizza.term.freq  <- GetDocTermFreq(pizza.corpus)
      nopizza.term.freq <- GetDocTermFreq(nopizza.corpus)
 
      set.seed(142)
@@ -225,6 +228,13 @@
                scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
      text(x=0.5, y=1.1, "no pizza")
      par(opar) ## reset defaults
+
+   #+END_SRC
+
+
+   See top 21 frequent word
+   
+   #+BEGIN_SRC R :session :tangle descriptive.R
 
      nw <- 21
      pizza.data.view <- data.frame(word=names(pizza.term.freq[1:nw]),
