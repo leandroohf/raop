@@ -17,6 +17,20 @@
     We select the variable in the target data frame below for the
     exploratory analysis
     
+  ================================= Importante
+
+  Explicar pq converti para Decile e pq nao considerei valores negativos
+  E o motivo foi que para narrative score, muitas narrativas nao pontua gerando 
+  uma concentracao no em zero e assim gera discontinidade na distribuicao dos scores
+  Ex: 1000 posts com 0 decile e depois 7 decile com 100, 8 com 200 3 assim eu tenho
+  a dist do restante dos potnos. 
+
+
+  ## So zero freq in narrative score are represented as 0 decile
+  ## Also affect negative sentiment score but It seems 
+
+
+    
   #+BEGIN_SRC R :session :tangle raop.R :results none
     ##* ****************************************************************
     ##  Programmer[s]: Leandro Fernandes
@@ -124,7 +138,6 @@
         geom_line() + ggtitle('Success rate vs. narrative') +
         scale_x_continuous(breaks = seq(0, 10, 1), name = 'Narrative declie') +
         scale_y_continuous(name = 'Success rate')
-
 
     p
 
