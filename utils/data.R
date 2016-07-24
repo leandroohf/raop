@@ -150,10 +150,13 @@ RAoPDataEngineer_ConvertToDecile <- function(dev.data,ref.data, cols.to.transfor
     return(dev.data)
 }
 
-RAoPDataEngineer_DesignData <- function(raop.target, raop.settings){
-        
-    dev.data <- RAoPDataEngineer_BalanceDataClass(raop.target)
+RAoPDataEngineer_DesignData <- function(raop.target, raop.settings, balance = TRUE){
 
+    dev.data <- raop.target
+    if(balance == TRUE){
+        dev.data <- RAoPDataEngineer_BalanceDataClass(dev.data)
+    }
+        
     ## XXX Improve this code. I need to pass the max n min used in
     ## train phase for new data. So I need to pass a reference !?
     ## This is a temp solution. I am wasting memory and performance
@@ -215,18 +218,27 @@ RAoPDataEngineer_TransformNumericalVars <- function(dev.data, train.data, cols_t
     return(dev.data)
 }
 
-RAoPDataEngineer_SplitData <- function(dev.data, ratio_ = 0.70, seed_ = 13){
+RAoPDataEngineer_SplitData <- function(dev.data, ratio_ = 0.70, seed_ = -1){
 
     cat("Spliting data in train n test ... \n")
-    train.size <- round(nrow(dev.data)*ratio_)
-    val.size   <- nrow(dev.data) - train.size
+    if(seed_ < 0){
+        ## random split
+
+        train.size <- round(nrow(dev.data)*ratio_)
+        val.size   <- nrow(dev.data) - train.size
     
-    set.seed(seed_)
-    r <- sample(nrow(dev.data),train.size)
+        set.seed(seed_)
+        r <- sample(nrow(dev.data),train.size)
 
-    train.data <- dev.data[r,]
-    val.data   <- dev.data[-r,]
-
+        train.data <- dev.data[r,]
+        val.data   <- dev.data[-r,]
+        
+    }else{
+        ## use same test of the paper
+        train.data <- dev.data %>% dplyr::filter(in_test_set ==  FALSE)
+        val.data   <- dev.data %>% dplyr::filter(in_test_set ==  TRUE)
+    }
+    
     return(list(train.data,val.data))
 }
 
