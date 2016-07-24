@@ -4,7 +4,6 @@ library(assertthat, quietly = TRUE )
 
 RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
                              raop.settings){
-
     
     raop.target <- RAoPDataEngineer_BuildDataTarget(raop.df, sent.dict,
                                                     narrative.dict,
@@ -40,8 +39,6 @@ RAoPDataEngineer_BuildDataTarget <- function(raop.df, sent.dict, narrative.dict,
     ## Defensive programming
     stopifnot( "requester_received_pizza" %in% names(raop.df) )
 
-    ##raop.df$requester_received_pizza <- as.numeric(raop.df$requester_received_pizza)
-
     raop.df <- RAoPDataEngineer_BuildNewFeatures(raop.df, sent.dict, narrative.dict)
 
     ## Convert
@@ -49,8 +46,6 @@ RAoPDataEngineer_BuildDataTarget <- function(raop.df, sent.dict, narrative.dict,
     print(raop.settings$cols_to_transform)
     raop.df <- RAoPDataEngineer_ConvertToDecile(raop.df,raop.df,
                                                 raop.settings$cols_to_transform)
-    
-
     
     cat("Selecting target vars... \n")    
     raop.target <- raop.df %>%
@@ -77,8 +72,7 @@ RAoPDataEngineer_BuildNewFeatures <- function(raop.df, sent.dict, narrative.dict
     raop.df$nword <- str_count(raop.df[,"request_text"], "\\S+")
 
     raop.df$posted.raop.before <- raop.df[,"requester_number_of_posts_on_raop_at_request"] > 0
-    ##raop.df$posted.raop.before <- as.numeric(raop.df$posted.raop.before)
-    
+
     raop.df <- RAoPDataEngineer_BuildTimeFeatures(raop.df)
     
     cat("Text engineering...\n")
@@ -91,18 +85,17 @@ RAoPDataEngineer_BuildTimeFeatures <- function(raop.df){
 
     raop.df$request.date   <- as.Date(as.POSIXct(raop.df[,"unix_timestamp_of_request"],
                                                  origin="1970-01-01", tz = "UTC"))
+    
     raop.df$community_age         <- as.numeric(raop.df$request.date - as.Date('2010-12-08'))
 
     raop.df$first.half.of.month   <- (lubridate::day(raop.df$request.date) < 16)
-    ##raop.df$first.half.of.month <- as.numeric(raop.df$first.half.of.month)
     raop.df$is.weekend            <- (lubridate::wday(raop.df$request.date) %in%  c(1,6,7))
-    ##raop.df$is.weekend          <-  as.numeric(raop.df$is.weekend)
+
     
     return(raop.df)
 }
 
 RAoPDataEngineer_BuildTextFeatures <- function(raop.df, sent.dict, narrative.dict){
-
 
     raop.df$gratitude <- str_detect( raop.df[,"request_text"],
                                     "thank|appreciate|advance")
@@ -112,9 +105,9 @@ RAoPDataEngineer_BuildTextFeatures <- function(raop.df, sent.dict, narrative.dic
                                       "pay.+forward|pay.+back|return.+favor|repay")
     
     
-    raop.df$has.link           <- str_detect( raop.df[,"request_text"], "https?://")
+    raop.df$has.link   <- str_detect( raop.df[,"request_text"], "https?://")
 
-    raop.corpus       <- GetCleanedCorpus(raop.df$request_text)
+    raop.corpus        <- GetCleanedCorpus(raop.df$request_text)
 
     ## Sentiment score
     raop.df$post.sent <- GetSentimentScoreFromCorpus(raop.corpus,
@@ -148,7 +141,9 @@ RAoPDataEngineer_ConvertToDecile <- function(dev.data,ref.data, cols.to.transfor
     for( cc in cols.to.transform ){
         cat(cc,"...\n")
         x              <- unlist((dev.data[, cc]))
-        decile.x       <- quantile(ref.data[, cc], seq(0, .9, .1))
+        ## Considering only values gretaher than zero
+        xref           <- ref.data[ ref.data[, cc] > 0.0, cc]
+        decile.x       <- quantile(xref, seq(0, .9, .1))
         dev.data[, cc] <- ConvertToDecile( x, decile.x )
     }
     
