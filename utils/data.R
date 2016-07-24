@@ -8,19 +8,22 @@ RAoPDataEngineer <- function(raop.df, sent.dict, narrative.dict,
     raop.target <- RAoPDataEngineer_BuildDataTarget(raop.df, sent.dict,
                                                     narrative.dict,
                                                     raop.settings)
-
-    data.split.list <- RAoPDataEngineer_DesignData( raop.target,
-                                                   raop.settings)
     
-    train.data      <- data.split.list[[1]]
-    val.data        <- data.split.list[[2]]
-
     list(
         GetDataTarget = function(){
             return(raop.target)
         },
         ## TODO Pass ratio_ n seed_ as args (Now is ignored)
-        GetDesignData = function(ratio_ = 0.70, seed_ = 13){        
+        GetDesignData = function( balance_ = FALSE, seed_ = -1){
+
+            data.split.list <- RAoPDataEngineer_DesignData( raop.target,
+                                                           raop.settings,
+                                                           balance_,
+                                                           seed_)
+            
+            train.data      <- data.split.list[[1]]
+            val.data        <- data.split.list[[2]]
+            
             return(data.split.list)
         },
         PreProcessNewData = function(newdata.df){
@@ -150,10 +153,11 @@ RAoPDataEngineer_ConvertToDecile <- function(dev.data,ref.data, cols.to.transfor
     return(dev.data)
 }
 
-RAoPDataEngineer_DesignData <- function(raop.target, raop.settings, balance = TRUE){
-
+RAoPDataEngineer_DesignData <- function(raop.target, raop.settings, balance_= FALSE,
+                                        seed_= -1){
+    
     dev.data <- raop.target
-    if(balance == TRUE){
+    if(balance_== TRUE){
         dev.data <- RAoPDataEngineer_BalanceDataClass(dev.data)
     }
         
@@ -163,13 +167,13 @@ RAoPDataEngineer_DesignData <- function(raop.target, raop.settings, balance = TR
     ## but reducing implementation cost
     dev.data   <- RAoPDataEngineer_TransformNumericalVars(dev.data,dev.data,
                                                           raop.settings$cols_to_transform)
+
+    split.list <- RAoPDataEngineer_SplitData(dev.data, seed_ ) ## <= list(train.data, val.data)
     
     ## Select cols to models investigation
     dev.data <- dev.data %>%
         dplyr::select( dplyr::one_of( raop.settings$cols_model_investigation ))
     
-    split.list <- RAoPDataEngineer_SplitData(dev.data) ## <= list(train.data, val.data)
-
     return(split.list)
 }
 
@@ -218,10 +222,13 @@ RAoPDataEngineer_TransformNumericalVars <- function(dev.data, train.data, cols_t
     return(dev.data)
 }
 
-RAoPDataEngineer_SplitData <- function(dev.data, ratio_ = 0.70, seed_ = -1){
+RAoPDataEngineer_SplitData <- function(dev.data, seed_ = -1){
 
+    ## XXX Not so good practice
+    ratio_ = 0.70
+    
     cat("Spliting data in train n test ... \n")
-    if(seed_ < 0){
+    if(seed_ > 0){
         ## random split
 
         train.size <- round(nrow(dev.data)*ratio_)
