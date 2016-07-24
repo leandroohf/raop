@@ -29,7 +29,6 @@
   ## So zero freq in narrative score are represented as 0 decile
   ## Also affect negative sentiment score but It seems 
 
-
     
   #+BEGIN_SRC R :session :tangle raop.R :results none
     ##* ****************************************************************
@@ -254,6 +253,14 @@
         geom_histogram(binwidth = 1) + facet_grid(requester_received_pizza ~ . )
 
     summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
+
+    data.view <- data.target %>%
+        na.omit() %>%
+        dplyr::group_by( nword) %>%
+        dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())
+
+    names(data.view)[1] <- c("nword")
+    p <- ggplot(data.view, aes(x=nword,y=success_rate)) + geom_line()
   #+END_SRC
 
 * Model development
