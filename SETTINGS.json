@@ -1,4 +1,6 @@
 {
+    "data_url": "http://cs.stanford.edu/~althoff/raop-dataset/pizza_request_dataset.tar.gz",
+    "data_compressed_path": "pizza_request_dataset/pizza_request_dataset.json",
     "data_raw_path": "data/raw/pizza_request_dataset.json",
     "data_target_path": "data/stage/raop_target.feather",
     "new_data_raw_path": "data/raw/new_request_data.json",
