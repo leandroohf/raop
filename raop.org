@@ -2,10 +2,6 @@
 
 * Introduction
 
-  Adicionei esta linha apenas para testar se estou conseguindo fazer
-  push no repo remoto (depois remover)
-
-
   Eu vou basear bem no Rpub
   http://www.runzemc.com/2014/08/random-acts-of-pizza.html
   https://rpubs.com/kuhnrl30/RAOP
