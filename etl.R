@@ -22,8 +22,3 @@ download.file(settings$data_url,temp)
 untar(temp,files=settings$data_compressed_path, exdir = "data/raw/", extras = "--strip-components=1")
 
 file.remove(temp)
-
-
-
-
-            
