@@ -194,6 +194,7 @@
 
     names(data.view)[1] <- c("week_day")
     p <- ggplot(data.view, aes(x=week_day,y=success_rate)) + geom_bar(stat = 'identity')
+    print(p)
 
     ## =================================
     ## has posted before
@@ -204,6 +205,7 @@
 
     names(data.view)[1] <- c("posted_before")
     p <- ggplot(data.view, aes(x=posted_before,y=success_rate)) + geom_bar(stat = 'identity') 
+    print(p)
 
     summary(aov(requester_received_pizza ~ posted.raop.before , data.target)) 
 
@@ -216,6 +218,7 @@
 
     names(data.view)[1] <- c("has_link")
     p <- ggplot(data.view, aes(x=has_link,y=success_rate)) + geom_bar(stat = 'identity') 
+    print(p)
 
     summary(aov(requester_received_pizza ~ has.link , data.target)) 
 
@@ -228,6 +231,7 @@
 
     names(data.view)[1] <- c("gratitude")
     p <- ggplot(data.view, aes(x=gratitude,y=success_rate)) + geom_bar(stat = 'identity') 
+    print(p)
 
     summary(aov(requester_received_pizza ~ gratitude , data.target)) 
 
@@ -240,6 +244,7 @@
 
     names(data.view)[1] <- c("reciprocity")
     p <- ggplot(data.view, aes(x=reciprocity,y=success_rate)) + geom_bar(stat = 'identity') 
+    print(p)
 
     summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
 
@@ -248,9 +253,11 @@
 
     p <- ggplot(data.target, aes(x=requester_received_pizza,y=nword)) +
         geom_boxplot()
+    print(p)
 
     p <- ggplot(data.target, aes(x=nword,)) +
         geom_histogram(binwidth = 1) + facet_grid(requester_received_pizza ~ . )
+    print(p)
 
     summary(aov(requester_received_pizza ~ reciprocity , data.target)) 
 
