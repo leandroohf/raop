@@ -285,7 +285,6 @@
 
 *** Data design (train, test n ensenble dataset)
 
-
     #+begin_src R
       library(caret)
       ##library(plyr)
@@ -299,7 +298,6 @@
 
       library(feather, quietly = TRUE )
       library(jsonlite, quietly = TRUE )
-
       source("./utils/data.R")
       source("./utils/utils.R")
       source("./utils/report.R")
@@ -343,9 +341,9 @@
       data.target$is.weekend <- as.numeric(data.target$is.weekend)
 
       data.target$requester_received_pizza <- as.factor(data.target$requester_received_pizza)
-
       levels(data.target$requester_received_pizza) <- list("fail" = FALSE, "success" = TRUE)
 
+      set.seed(2014)
       train_ind = createDataPartition(data.target$requester_received_pizza,
                                      p = .80, list = FALSE)
 
@@ -353,20 +351,23 @@
 
       train_m = data.target[train_ind, ]  # 80% for models
 
+      set.seed(2014)
       train_ind = createDataPartition(train_m$requester_received_pizza,
-                                     p = .50, list = FALSE)
+                                     p = .90, list = FALSE)
 
       train_tr = train_m[train_ind,]  ## 50% to train each model
       train_es = train_m[-train_ind,] ## 50% to train ensemble model 
 
-       ## train the training set
-       ind_vars <- names(train_tr)[1:length(train_tr)-1]
-       labelName    <- "requester_received_pizza"  
+      ## train the training set
+
+      labelName    <- "requester_received_pizza"  
+      ind_vars <- names(train_tr)[names(train_tr) != labelName ]
 
       cat(dim(train_te))
       cat(dim(train_tr))
       cat(dim(train_es))
 
+      ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
     #+end_src
 
 *** DONE Logistic Regredssion
@@ -378,12 +379,10 @@
 
     #+begin_src R
 
-      ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
-
       ## ------------------------------- [ Logistic Regression ]
       set.seed(2014)
       tic("Training: GLM .....")
-      loit_m <- train(requester_received_pizza ~
+      logit_m <- train(requester_received_pizza ~
                           requester_upvotes_minus_downvotes_at_request +
                           community_age +
                           nword + has.link + post.sent + posted.raop.before +
@@ -397,75 +396,173 @@
 
    #+end_src
 
-*** GBM
+*** DONE GBM
 
+    +*TODO* (Unica coisa q pode explicar o rsultado anterior. senao der desiste)+
+    Vou adicionar a dummy>money.score: money.score > 4 => 1
+    
+    +*TODO*  Se o anterior funcionar tentar+ Nao vou tentar
+    desire.money < 3 => 1
+    desire.money >=3 and < 8 => 2
+    desire.money >= 8 => 3
+    
+    *Por incrivel que pareca piorou a situacao*
+    
     Como eu melhore este resultado? Preciso fazer os graficos de tunning do caret
 
     http://topepo.github.io/caret/model-training-and-tuning.html
     
+    pergunto se eu fizer scale n center (standardize vars) vou ter um melhor resultado?
+    http://machinelearningmastery.com/pre-process-your-dataset-in-r/
+
+
+    Sem preprocessing o melhor que eu consegui foi
+
+    shrinkage: 0.005; ntree: 1500; depth: 4; auc: 0.75; time: ~2.0 minutos
+    [[file:scratch/gbm_shr0.005_ntree1500_depth4_auc0.75.png]]
+
+    ---------------------------------
+    Nao consegui reproduzir resultado anterior e aprentemente nehuma
+    transformacs de cente e scale ajudou a melhorar o resultado
+
+    shrinkage: 0.005; ntree: 800; depth: 7; auc: 0.693; time: ~1.0 minutos
+    [[file:scratch/gbm_shr0.005_ntree800_depth7_auc0.693.png]]
+
+
    #+begin_src R
-      ## ----------------------------------------------- [ GBM ]
-      gbm_tune = expand.grid( interaction.depth = seq(1, 5, 2),
-                             n.trees = seq(500, 2000, 500),
-                             shrinkage = c(.01, .1),
-                             n.minobsinnode = 9)
 
-      set.seed(2014)
-      tic("Training: GBM .....")
-      gbm_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
-                    method = 'gbm', tuneGrid = gbm_tune,
-                    metric = 'ROC', verbose = F, trControl = ctrl)
+     ## ----------------------------------------------- [ GBM ]
+     gbm_tune = expand.grid( interaction.depth = c( 4,5, 6,7,8),
+                            n.trees = c(400,500, 600, 700, 800, 900, 1000, 1100,1200, 1500, 2000),
+                            shrinkage = c(.005),
+                            n.minobsinnode = 9)
 
-      gbm_imp = varImp(gbm_m)
-      toc()
+     set.seed(2014)
+     tic("Training: GBM .....")
+     gbm_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
+                   method = 'gbm', tuneGrid = gbm_tune,
+                   metric = 'ROC', verbose = F, trControl = ctrl)
+
+     #gbm_imp = varImp(gbm_m)
+     toc()
 
    #+end_src
 
-*** Random Forest
 
    #+begin_src R
-      ## ------------------------------------- [ Random Forest ]
-      #random forests (mtry = 2, roc = .656)
-      rf_tune = expand.grid(.mtry = seq(2, 10))
 
-      set.seed(2014)
-      tic("Training: RF .....")
-      rf_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
-                   method = 'rf', ntree = 1000, metric = 'ROC', 
-                   tuneGrid = rf_tune, trControl = ctrl, importance = T)
+     preprocess_params <- preProcess(train_tr, method=c("center", "scale"))
+     train_tr_pre <- predict(preprocess_params, train_tr )
 
-      rf_imp = varImp(rf_m)
-      toc()
-   #+end_src
+     ## Restoring defalts boolen variables value
+     train_tr_pre[,"has.link"]                  <-  train_tr[,"has.link"]
+     train_tr_pre[,"gratitude"]                 <-  train_tr[,"gratitude"]
+     train_tr_pre[,"reciprocity"]               <-  train_tr[,"reciprocity"]
+     train_tr_pre[,"is.weekend"]                <-  train_tr[,"is.weekend"]
+     train_tr_pre[,"first.half.of.month"]       <-  train_tr[,"first.half.of.month"]
+     train_tr_pre[,"posted.raop.before"]        <-  train_tr[,"posted.raop.before"]
+     train_tr_pre[,"requester_received_pizza" ] <-  train_tr[,"requester_received_pizza" ]
 
-*** Neura Network
+     ## ----------------------------------------------- [ GBM ]
+     gbm_tune = expand.grid( interaction.depth = c(2, 3, 4),
+                            n.trees = c(500, 1000, 1500, 2000, 2500, 3000),
+                            shrinkage = c(.001, .005),
+                            n.minobsinnode = 9)
 
-   #+begin_src R
-      ## ------------------------------------ [ Neural Network ]
-      #nnet (size = 4, decay = 2, roc = .669)
-      nnet_tune = expand.grid(size = 1:10, decay = c(0, .1, 1, 2))
+     set.seed(2014)
+     tic("Training: GBM .....")
+     gbm_m = train(x = train_tr_pre[, ind_vars], y = train_tr_pre$requester_received_pizza,
+                   method = 'gbm', tuneGrid = gbm_tune,
+                   metric = 'ROC', verbose = F, trControl = ctrl)
 
-      set.seed(2014)
-      tic("Training: Neural Net .....")
-      nnet_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
-                     method = 'nnet', tuneGrid = nnet_tune,
-                     metric = 'ROC', preProc = c('center', 'scale'),
-                     verbose = F,
-                     trControl = ctrl)
-
-      nnet_imp = varImp(nnet_m)
-      toc()
+     #gbm_imp = varImp(gbm_m)
+     toc()
 
    #+end_src
 
-*** SVM
+*** DONE Random Fodrest
+    
+    | mtry | ntree |    AUC | comm                                         |
+    |------+-------+--------+----------------------------------------------|
+    |    3 |   300 |  0.675 |                                              |
+    |    2 |  1000 |  0.676 |                                              |
+    |    2 |  1500 | 0.6759 |                                              |
+    |    2 |  1750 | 0.6761 |                                              |
+    |    2 |  2000 |  0.678 | best                                         |
+    |    2 |  2250 |  0.675 |                                              |
+    |    2 |  2500 |  0.676 |                                              |
+    |    3 |  3000 |  0.676 | pouco melhor do q 2; 3000 no mesmo graficoxs |
+    |      |  4500 |        |                                              |
+    |------+-------+--------+----------------------------------------------|
+
+    =================================
+    [2017-01-22 Sun]
+    dim(train_r):  4085   21
+    
+    mtry: 3; ntree: 2250; auc: 0.680
+    
+    =================================
+
+   #+begin_src R
+     ## ------------------------------------- [ Random Forest ]
+     #random forests (mtry = 2, roc = .656)
+     rf_tune = expand.grid(.mtry =  seq(2,5,1))
+
+     set.seed(2014)
+     tic("Training: RF .....")
+     rf_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
+                  method = 'rf', ntree = 2250, metric = 'ROC', 
+                  tuneGrid = rf_tune, trControl = ctrl, importance = T)
+
+     #rf_imp = varImp(rf_m)
+     toc()
+   #+end_src
+
+*** DONE Neura Network
+
+    Eh provavel que nnet seja o mais sensivel ao sample size
+    
+    [2017-01-22 Sun]
+    dim(train_r):  4085   21
+    decay3; size4; auc0.679
+    
+    [[file:scratch/2017-01-22-nnet-decay3-size4-auc0.693.png]]
+    
+    =================================
+
+   #+begin_src R
+     ## ------------------------------------ [ Neural Network ]
+     #nnet (size = 4, decay = 2, roc = .669)
+     nnet_tune = expand.grid(size = seq(1,10,1), decay = c(2,3,4))
+
+     set.seed(2014)
+     tic("Training: Neural Net .....")
+     nnet_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
+                    method = 'nnet',maxit = 1000, tuneGrid = nnet_tune,
+                    metric = 'ROC', preProc = c('center', 'scale'),
+                    verbose = F,
+                    trControl = ctrl)
+
+     nnet_imp = varImp(nnet_m)
+     toc()
+
+   #+end_src
+
+*** DONE SVM
+
+   [2017-01-22 Sun]
+    dim(train_r):  4085   21
+
+
+    Peerformnace muita baixa comparadao aos outros modelos.
+    Acho que nao vale apena tunar
 
    #+begin_src R
       ## ----------------------------------------------- [ SVM ]
 
       # Use the expand.grid to specify the search space	
-      svm_tune  <- expand.grid(sigma = c(.01, .015, 0.2),
-                               C = c(0.75, 0.9, 1, 1.1, 1.25))
+      svm_tune  <- expand.grid(sigma = c(0.001, 0.01, .05),
+                               C = c(0.5, 0.75, 0.9, 1, 1.1, 1.25))
 
       set.seed(2014)
       tic("Training: SVM .....")
@@ -495,154 +592,152 @@
 
       simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
    #+end_src
-
+   
 *** Ensemble
 
    #+begin_src R
 
-      ## --------------------------------- [ Ensemble Baggging ]
-      ## combine results
+     ## --------------------------------- [ Ensemble Baggging ]
+     ## combine results
 
-      logit_p <- predict(logit_m, train_te[, ind_vars], type = 'prob')
-      rf_p    <- predict(rf_m, train_te[, ind_vars], type = 'prob')
-      gbm_p   <- predict(gbm_m, train_te[, ind_vars], type = 'prob')
-      nnet_p  <- predict(nnet_m, train_te[, ind_vars], type = 'prob')
-      svm_p   <- predict(svm_m, train_te[, ind_vars], type = 'prob')   
+     logit_p <- predict(logit_m, train_te[, ind_vars], type = 'prob')
+     rf_p    <- predict(rf_m, train_te[, ind_vars], type = 'prob')
+     gbm_p   <- predict(gbm_m, train_te[, ind_vars], type = 'prob')
+     nnet_p  <- predict(nnet_m, train_te[, ind_vars], type = 'prob')
+     #svm_p   <- predict(svm_m, train_te[, ind_vars], type = 'prob')   
 
-      mean_p <- (logit_p$success + rf_p$success + gbm_p$success + nnet_p$success + svm_p$success) / 5
+     mean_p <- (logit_p$success + rf_p$success + gbm_p$success + nnet_p$success) / 4
+     median_p <- apply(cbind(logit_p$success,rf_p$success,gbm_p$success,nnet_p$success),1,median)
 
+     ## ----------------------------------- [ Ensemble Stack  ]
 
-      ## ----------------------------------- [ Ensemble Stack  ]
+     train_te$logit_prob <-  predict(logit_m, train_te[, ind_vars], type = 'prob')$success
+     train_te$rf_prob    <-  predict(rf_m, train_te[, ind_vars], type = 'prob')$success
+     train_te$gbm_prob   <-  predict(gbm_m, train_te[, ind_vars],type ='prob')$success
+     train_te$nnet_prob  <-  predict(nnet_m, train_te[, ind_vars], type = 'prob')$success
+     #train_te$svm_prob   <-  predict(svm_m, train_te[, ind_vars], type = 'prob')
 
-      train_te$logit_prob <-  predict(logit_m, train_te[, ind_vars], type = 'raw')
-      train_te$rf_prob    <-  predict(rf_m, train_te[, ind_vars], type = 'raw')
-      train_te$gbm_prob   <-  predict(gbm_m, train_te[, ind_vars],type ='raw')
-      train_te$nnet_prob  <-  predict(nnet_m, train_te[, ind_vars], type = 'raw')
-      train_te$svm_prob   <-  predict(svm_m, train_te[, ind_vars], type = 'raw')
-
-      train_es$logit_prob <- predict(logit_m, train_es[, ind_vars], type = 'raw')
-      train_es$rf_prob    <- predict(rf_m, train_es[, ind_vars], type = 'raw')
-      train_es$gbm_prob   <- predict(gbm_m, train_es[, ind_vars],type ='raw')
-      train_es$nnet_prob  <- predict(nnet_m, train_es[, ind_vars], type = 'raw')
-      train_es$svm_prob   <- predict(svm_m, train_es[, ind_vars], type = 'raw')
-
-
-      gbm_tune = expand.grid( interaction.depth = seq(1, 5, 2),
-                             n.trees = seq(500, 2000, 500),
-                             shrinkage = c(.01, .1),
-                             n.minobsinnode = 9)
-
-      set.seed(2014)
-      tic("Training: Ensemble GBM ....")
-
-      predictors <- names(train_es)[names(train_es) != labelName]
+     train_es$logit_prob <- predict(logit_m, train_es[, ind_vars], type = 'prob')$success
+     train_es$rf_prob    <- predict(rf_m, train_es[, ind_vars], type = 'prob')$success
+     train_es$gbm_prob   <- predict(gbm_m, train_es[, ind_vars],type ='prob')$success
+     train_es$nnet_prob  <- predict(nnet_m, train_es[, ind_vars], type = 'prob')$success
+     #train_es$svm_prob   <- predict(svm_m, train_es[, ind_vars], type = 'prob')
 
 
-      stack_m  <- train(x = train_es[, predictors], y = train_es$requester_received_pizza,
-                        method = 'gbm', tuneGrid = gbm_tune,
-                        metric = 'ROC', verbose = F, trControl = ctrl)
+     stack_tune = expand.grid( interaction.depth = seq(1, 5, 2),
+                            n.trees = seq(500, 2000, 500),
+                            shrinkage = c(.01, .1),
+                            n.minobsinnode = 9)
+
+     set.seed(2014)
+     tic("Training: Ensemble GBM ....")
+
+     stack_vars <- names(train_es)[names(train_es) != labelName ]
+     stack_m  <- train(x = train_es[, stack_vars], y = train_es$requester_received_pizza,
+                       method = 'gbm', tuneGrid = stack_tune,
+                       metric = 'ROC', verbose = F, trControl = ctrl)
+
+
+     stack_p   <- predict(stack_m, train_te[, stack_vars], type = 'prob')
 
    #+end_src
-
+   
 *** Comparing Models
 
     Mudar para proxima secao depois
 
    #+begin_src R
-      ## ------------------------------- [ Plot Var Importance ]
+     ## ------------------------------- [ Plot Var Importance ]
 
-      ## plot importance
-      plot_imp <- function(x) {
+     ## plot importance
+     plot_imp <- function(x) {
 
-          ## data hangler
-          df = data.frame(x[[1]])
-          names(df) = 'importance'
-          df$variable = row.names(df)
+         ## data hangler
+         df = data.frame(x[[1]])
+         names(df) = 'importance'
+         df$variable = row.names(df)
 
-          var_order = df$variable[order(df$importance)]
-          df$variable = factor(df$variable, levels = var_order)
+         var_order = df$variable[order(df$importance)]
+         df$variable = factor(df$variable, levels = var_order)
 
-          p <- ggplot(df, aes(x = importance, y = variable)) +
-              geom_segment(aes(yend = variable), xend = 0, colour = 'grey50') +
-              geom_point(size = 3, colour = '#1d91c0') +
-          ggtitle(x[[2]]) + theme_bw() + guides(fill = F)
+         p <- ggplot(df, aes(x = importance, y = variable)) +
+             geom_segment(aes(yend = variable), xend = 0, colour = 'grey50') +
+             geom_point(size = 3, colour = '#1d91c0') +
+         ggtitle(x[[2]]) + theme_bw() + guides(fill = F)
 
-          return(p)
-      }
+         return(p)
+     }
 
-      p_logit_imp <- plot_imp(logit_imp)
-      p_rf_imp    <- plot_imp(rf_imp)
-      p_gbm_imp   <- plot_imp(gbm_imp)
-      p_nnet_imp  <- plot_imp(nnet_imp)
-      p_svm_imp   <- plot_imp(svm_imp)
+     p_logit_imp <- plot_imp(logit_imp)
+     p_rf_imp    <- plot_imp(rf_imp)
+     p_gbm_imp   <- plot_imp(gbm_imp)
+     p_nnet_imp  <- plot_imp(nnet_imp)
+     p_svm_imp   <- plot_imp(svm_imp)
 
-      grid.arrange(p_logit_imp, p_rf_imp, p_gbm_imp, p_nnet_imp, p_svm_imp, top= 'Variable importance')
+     grid.arrange(p_logit_imp, p_rf_imp, p_gbm_imp, p_nnet_imp, p_svm_imp, top= 'Variable importance')
 
-      ## ---------------------------------- [ Comparing models ]
-      success  <- predict(simple_m, list(nword = train_te$nword),type="response")
-      simple_p <- data.frame(fail= 1.0 - success, success=success)
+     ## ---------------------------------- [ Comparing models ]
+     success  <- predict(simple_m, list(nword = train_te$nword),type="response")
+     simple_p <- data.frame(fail= 1.0 - success, success=success)
+     
+     pfail  <- sum(train_tr$requester_received_pizza == 'fail')/nrow(train_tr)
+     null_p <- data.frame(fail = rep(pfail, nrow(train_te)),
+                          success = rep(1.0 - pfail, nrow(train_te)))
 
-      random_p <- data.frame(fail = rep(0.5, nrow(train_te)),
-                             success = rep(0.5, nrow(train_te)))
+     roc(train_te$requester_received_pizza, null_p$success) # random model
+     roc(train_te$requester_received_pizza, simple_p$success)
+     roc(train_te$requester_received_pizza, mean_p)
+     roc(train_te$requester_received_pizza, median_p)
+     roc(train_te$requester_received_pizza, stack_p$success)
 
-      pfail  <- sum(train_tr$requester_received_pizza == 'fail')/nrow(train_tr)
-      null_p <- data.frame(fail = rep(pfail, nrow(train_te)),
-                           success = rep(1.0 - pfail, nrow(train_te)))
+     ## --------------------------------------- [ Preditcions ]
 
+     pred_log  <- predict( object = logit_m, newdata = train_te, type = "prob")
+     pred_gbm  <- predict( object = gbm_m, newdata = train_te[, ind_vars], type = "prob") 
+     pred_rf   <- predict( object = rf_m, newdata = train_te, type = "prob")
+     pred_nnet <- predict( object = nnet_m, newdata = train_te, type = "prob")
+     ## pred_svm  <- predict( object = svm_m, newdata = train_te, type = "raw")
 
-      roc(train_te$requester_received_pizza, random_p$success)
-      roc(train_te$requester_received_pizza, null_p$success)
-      roc(train_te$requester_received_pizza, simple_p$success)
-      roc(train_te$requester_received_pizza, mean_p)
+     pred_mean <- as.factor(mean_p > 0.5)
+     levels(pred_mean) = list("fail" = FALSE, "success" = TRUE)
 
-      ## --------------------------------------- [ Preditcions ]
+     ## pred_stacking <- gbm(Y ~ X:M1,M2,M3,M4)
 
-      pred_log  <- predict( object = logit_m, newdata = train_te, type = "raw") 
-      pred_gbm  <- predict( object = gbm_m, newdata = train_te[, ind_vars], type = "raw") 
-      pred_rf   <- predict( object = rf_m, newdata = train_te, type = "raw")
-      pred_nnet <- predict( object = nnet_m, newdata = train_te, type = "raw")
-      ## pred_svm  <- predict( object = svm_m, newdata = train_te, type = "raw")
+     pred_null <- as.factor(rep(FALSE, length(pred_log)))
+     levels(pred_null) = list("fail" = FALSE, "success" = TRUE)
 
-      pred_mean <- as.factor(mean_p > 0.5)
-      levels(pred_mean) = list("fail" = FALSE, "success" = TRUE)
+     pred_simple <- predict( object = simple_m, newdata = train_te, type = "link")
+     pred_simple <-  as.factor(pred_simple > 0.5)
+     levels(pred_simple) = list("fail" = FALSE, "success" = TRUE)
 
-      ## pred_stacking <- gbm(Y ~ X:M1,M2,M3,M4)
+     pred_random <- as.factor(runif(length(pred_log)) > 0.5 )
+     levels(pred_random) = list("fail" = FALSE, "success" = TRUE)
 
-      pred_null <- as.factor(rep(FALSE, length(pred_log)))
-      levels(pred_null) = list("fail" = FALSE, "success" = TRUE)
+     bool_log  <- pred_log == train_te$requester_received_pizza
+     bool_gbm  <- pred_gbm == train_te$requester_received_pizza
+     bool_rf   <- pred_rf == train_te$requester_received_pizza
+     bool_nnet <- pred_nnet == train_te$requester_received_pizza
+     ## bool_svm  <- pred_svm == train_te$requester_received_pizza
+     bool_mean <- pred_mean == train_te$requester_received_pizza
 
-      pred_simple <- predict( object = simple_m, newdata = train_te, type = "link")
-      pred_simple <-  as.factor(pred_simple > 0.5)
-      levels(pred_simple) = list("fail" = FALSE, "success" = TRUE)
+     bool_null <- pred_null == train_te$requester_received_pizza
+     bool_simple <- pred_simple == train_te$requester_received_pizza
+     bool_random <- pred_random == train_te$requester_received_pizza
 
-      pred_random <- as.factor(runif(length(pred_log)) > 0.5 )
-      levels(pred_random) = list("fail" = FALSE, "success" = TRUE)
+     r_df <- cbind( train_te[, ind_vars],
+                   train_te$requester_received_pizza, bool_log,bool_gbm,
+                   bool_rf, bool_nnet, bool_mean, bool_null, bool_random) ## bool_svm)
 
-      bool_log  <- pred_log == train_te$requester_received_pizza
-      bool_gbm  <- pred_gbm == train_te$requester_received_pizza
-      bool_rf   <- pred_rf == train_te$requester_received_pizza
-      bool_nnet <- pred_nnet == train_te$requester_received_pizza
-      ## bool_svm  <- pred_svm == train_te$requester_received_pizza
-      bool_mean <- pred_mean == train_te$requester_received_pizza
+     confusionMatrix(pred_log, train_te$requester_received_pizza)
+     confusionMatrix(pred_gbm, train_te$requester_received_pizza)
+     confusionMatrix(pred_rf, train_te$requester_received_pizza)
+     confusionMatrix(pred_nnet, train_te$requester_received_pizza)
+     ##confusionMatrix(pred_svm, train_te$requester_received_pizza)
 
-      bool_null <- pred_null == train_te$requester_received_pizza
-      bool_simple <- pred_simple == train_te$requester_received_pizza
-      bool_random <- pred_random == train_te$requester_received_pizza
+     confusionMatrix(pred_null, train_te$requester_received_pizza)
+     confusionMatrix(pred_mean, train_te$requester_received_pizza)
 
-      r_df <- cbind( train_te[, ind_vars],
-                    train_te$requester_received_pizza, bool_log,bool_gbm,
-                    bool_rf, bool_nnet, bool_mean, bool_null, bool_random) ## bool_svm)
-
-      confusionMatrix(pred_log, train_te$requester_received_pizza)
-      confusionMatrix(pred_gbm, train_te$requester_received_pizza)
-      confusionMatrix(pred_rf, train_te$requester_received_pizza)
-      confusionMatrix(pred_nnet, train_te$requester_received_pizza)
-      ##confusionMatrix(pred_svm, train_te$requester_received_pizza)
-
-      confusionMatrix(pred_null, train_te$requester_received_pizza)
-      confusionMatrix(pred_mean, train_te$requester_received_pizza)
-
-      cor(r_df[,c("bool_log","bool_gbm","bool_rf","bool_nnet")])
+     cor(r_df[,c("bool_log","bool_gbm","bool_rf","bool_nnet")])
 
     #+end_src
   
