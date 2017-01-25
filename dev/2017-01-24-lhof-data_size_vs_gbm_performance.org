@@ -1,0 +1,152 @@
+
+* Goals: estimate optimun train , val size
+* Data
+
+  #+begin_src R
+    library(caret)
+    ##library(plyr)
+    library(ggplot2)
+    library(gridExtra)
+    library(pROC)
+    library(tictoc)
+
+    library(doMC)
+    registerDoMC(cores = 7)
+
+    library(feather, quietly = TRUE )
+    library(jsonlite, quietly = TRUE )
+    source("./utils/data.R")
+    source("./utils/utils.R")
+    source("./utils/report.R")
+    source("./utils/model.R")
+
+    settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
+
+    cat('Loading data engineer...\n')
+    raop.engineer <- readRDS(settings$data_engineer_path)
+
+    data.target <- raop.engineer$GetDataTarget()
+
+
+    ## ----------------------------------- [ Data processing ]
+    data.target <- data.target[, c("requester_upvotes_minus_downvotes_at_request",
+                               "nword",
+                               "requester_account_age_in_days_at_request",
+                               "requester_days_since_first_post_on_raop_at_request",
+                               "requester_number_of_posts_at_request",
+                               "requester_number_of_posts_on_raop_at_request",
+                               "money.score",
+                               "desire.score",
+                               "family.score",
+                               "job.score",
+                               "student.score",
+                               "post.sent",
+                               "has.link",
+                               "gratitude",
+                               "reciprocity",
+                               "is.weekend",
+                               "community_age",
+                               "first.half.of.month",
+                               "posted.raop.before",                           
+                               "requester_received_pizza")]
+
+    data.target$has.link <- as.numeric(data.target$has.link)
+    data.target$first.half.of.month <- as.numeric(data.target$first.half.of.month)
+    data.target$posted.raop.before <- as.numeric(data.target$posted.raop.before)
+    data.target$gratitude <- as.numeric(data.target$gratitude)
+    data.target$reciprocity <- as.numeric(data.target$reciprocity)
+    data.target$is.weekend <- as.numeric(data.target$is.weekend)
+
+    data.target$requester_received_pizza <- as.factor(data.target$requester_received_pizza)
+    levels(data.target$requester_received_pizza) <- list("fail" = FALSE, "success" = TRUE)
+
+    set.seed(2014)
+    train_ind = createDataPartition(data.target$requester_received_pizza,
+                                   p = .80, list = FALSE)
+
+
+    train_te = data.target[-train_ind, ]    # 20% test
+
+    train_m = data.target[train_ind, ]  # 80% for models
+
+  #+end_src
+
+  #+begin_src R
+    set.seed(2014)
+    train_ind = createDataPartition(train_m$requester_received_pizza,
+                                   p = .99, list = FALSE)
+
+    train_tr = train_m[train_ind,]  ## 50% to train each model
+
+    ## train the training set
+
+    labelName    <- "requester_received_pizza"  
+    ind_vars <- names(train_tr)[names(train_tr) != labelName ]
+
+    cat(dim(train_te))
+    cat(dim(train_tr))
+
+    ctrl = trainControl(method = 'repeatedcv', summaryFunction = twoClassSummary, classProbs = T)
+  #+end_src
+
+* GBM
+  
+  ---------------------------------
+  Nao consegui reproduzir resultado anterior e aprentemente nehuma
+  transformacs de cente e scale ajudou a melhorar o resultado
+
+  shrinkage: 0.005; ntree: 800; depth: 7; auc: 0.693; time: ~1.0 minutos
+  
+  [[file:scratch/gbm_shr0.005_ntree800_depth7_auc0.693.png]]
+
+
+ #+begin_src R
+
+   ## ----------------------------------------------- [ GBM ]
+   gbm_tune = expand.grid( interaction.depth = c( 5,6,7,8,9),
+                          n.trees = c(400,500, 600, 700, 800, 900, 1000, 1100,1200, 1500, 2000),
+                          shrinkage = c(.005),
+                          n.minobsinnode = 9)
+
+   set.seed(2014)
+   tic("Training: GBM .....")
+   gbm_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
+                 method = 'gbm', tuneGrid = gbm_tune,
+                 metric = 'ROC', verbose = F, trControl = ctrl)
+
+   toc()
+
+ #+end_src
+
+* Test error
+  
+  #+begin_src R
+
+   ## --------------------------------- [ Performance test data set ]
+
+   gbm_p   <- predict(gbm_m, train_tr[, ind_vars], type = 'prob')
+   roc(train_tr$requester_received_pizza, gbm_p$success)
+
+
+   gbm_p   <- predict(gbm_m, train_te[, ind_vars], type = 'prob')
+   roc(train_te$requester_received_pizza, gbm_p$success)
+
+ #+end_src
+
+* Experiment
+  
+  *Refazendo pois estava reportando validation erro do k fold no lugar do train-erro q eh muito melhor*
+
+ | train percentage of train_m | test size | train size | train auc | train val | test auc | ntree | depth | shrinkage |
+ |-----------------------------+-----------+------------+-----------+-----------+----------+-------+-------+-----------|
+ |                        0.99 |      1133 |       4493 |    0.7444 | 0.6893191 |   0.7339 |  1000 |     5 |     0.005 |
+ |                        0.90 |      1133 |       4085 |    0.7681 | 0.6927333 |   0.7315 |  1500 |     5 |     0.005 |
+ |                        0.80 |      1133 |       3631 |    0.7638 | 0.6930263 |   0.7398 |   800 |     7 |     0.005 |
+ |                        0.70 |      1133 |       3177 |    0.8113 | 0.6868162 |   0.7285 |  1500 |     7 |     0.005 |
+ |                        0.60 |      1133 |       2723 |    0.7665 | 0.7041623 |   0.7294 |   700 |     5 |     0.005 |
+ |                        0.50 |      1133 |       2269 |    0.7817 | 0.6933047 |   0.7224 |   700 |     6 |     0.005 |
+ |                        0.40 |      1133 |       1816 |    0.8541 | 0.6969043 |   0.7245 |   900 |     9 |     0.005 |
+ |                        0.30 |      1133 |       1362 |    0.7962 | 0.6716852 |   0.7074 |   400 |     7 |     0.005 |
+ |                        0.20 |      1133 |        908 |    0.8432 | 0.6507013 |    0.694 |   600 |     6 |     0.005 |
+ |                        0.10 |      1133 |        454 |    0.8777 | 0.6437440 |   0.6908 |   500 |     5 |     0.005 |
+ |-----------------------------+-----------+------------+-----------+-----------+----------+-------+-------+-----------|
