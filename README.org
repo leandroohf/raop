@@ -24,7 +24,6 @@ names(raop.target)
 [17] "is.weekend"                                        
 #+END_EXAMPLE
 
-
   * "requester_days_since_first_post_on_raop_at_request"
     * 85% => 0; 89% < 10 days (concentration in this var)
   * requester_account_age_in_days_at_request
@@ -220,7 +219,7 @@ requester_account_age_in_days_at_request requester_days_since_first_post_on_raop
    #+END_SRC
 
 
-   Asssociation betwenn words
+   Asssociation between words
 
    #+BEGIN_SRC R
      findAssocs(dtm, c("pizza", "money") , corlimit=0.15) # specifying a correlation limit of 0.15 
@@ -247,7 +246,6 @@ requester_account_age_in_days_at_request requester_days_since_first_post_on_raop
      text(x=0.5, y=1.1, "no pizza")
      wordcloud(names(not.term.freq), not.term.freq, min.freq=250,
                scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
-
 
    #+END_SRC
 
@@ -947,7 +945,6 @@ testandos os narratives scores
 
 #+END_SRC
 
-
 **  Model adjust [2016-07-03 Sun]
 
    Vou apenas tratar karma. removendo outliers
@@ -1168,7 +1165,6 @@ testandos os narratives scores
   abline(a = 0.0, b=1.0,col = "lightgray", lty = 2)
 
 #+END_SRC
-
 
 ** Links
 
