@@ -43,3 +43,43 @@ RAoPModel <- function(glm.formula, train.data, val.data){
         }
     )
 }
+
+
+CreateRAoPModelDefaultsParams <- function(params, train_data, model_comment){
+
+    params$train_data_dim <- dim(train_data)
+    params$features <- paste0(names(train_data), collapse = ", ")
+    params$comment <- model_comment
+    
+    return(params)
+}
+
+SaveRAoPModel <- function(model_obj, model_description, model_params_list, settings){
+    
+    model_date <- lubridate::today()
+
+    model_path <- file.path(settings$model_dir, paste0(model_date,
+                                                       "-lhof-",
+                                                       model_description,".rds"))
+    
+    model_json_path <- file.path(settings$model_dir, paste0(model_date,
+                                                            "-lhof-",
+                                                            model_description,".json"))
+    
+    saveRDS(model_obj, model_path)
+    params_json <-  toJSON(x=model_params_list,pretty=TRUE)
+
+    writeLines(params_json,model_json_path)
+    
+}
+
+GetRAoPAUC <- function(raop_model,X,y){
+
+    model_p   <- predict(raop_model, X, type = 'prob')
+    raop <- roc(y, model_p$success)
+    
+    return(as.numeric(raop$auc))
+}
+
+
+

@@ -391,8 +391,21 @@
                       data = train_tr,
                       method = 'glm', metric = 'ROC', trControl = ctrl)
 
-      logit_imp = varImp(logit_m)
       toc()
+
+      params <- list()
+      params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
+                                              "Logistic regression tunned mannually based on exploratory phase.")
+
+      params$auc_val <- logit_m$results$ROC
+      params$features <- c("requester_upvotes_minus_downvotes_at_request,community_age,
+      nword,has.link, post.sent, posted.raop.before, reciprocity,family.score,student.scor")
+
+      auc_es <- GetRAoPAUC(logit_m,train_es[,ind_vars],train_es$requester_received_pizza)
+      cat("auc_train_es:", auc_es)
+
+      ## logit_m <- readRDS("models/2017-01-25-lhof-logit_tunned.rds")
+      SaveRAoPModel(logit_m,"logit_tunned",params,settings)
 
    #+end_src
 
@@ -443,8 +456,24 @@
                    method = 'gbm', tuneGrid = gbm_tune,
                    metric = 'ROC', verbose = F, trControl = ctrl)
 
-     #gbm_imp = varImp(gbm_m)
      toc()
+
+     params <- list()
+     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
+                                             "GBM tunned")
+
+     params$auc_val   <- max(gbm_m$results$ROC)
+     params$ntree     <- gbm_m$finalModel$n.trees
+     params$depth     <- gbm_m$finalModel$interaction.depth
+     params$shrinkage <- gbm_m$finalModel$n.trees
+
+
+     ## gbm_m <- readRDS("models/2017-01-25-lhof-gbm_tunned.rds")
+     auc_es <- GetRAoPAUC(gbm_m,train_es[,ind_vars],train_es$requester_received_pizza)
+     cat("auc_train_es:", auc_es)
+
+
+     SaveRAoPModel(gbm_m,"gbm_tunned",params,settings)
 
    #+end_src
 
@@ -480,7 +509,7 @@
 
    #+end_src
 
-*** DONE Random Fodrest
+*** DONE Random Forest
     
     | mtry | ntree |    AUC | comm                                         |
     |------+-------+--------+----------------------------------------------|
@@ -514,10 +543,25 @@
                   method = 'rf', ntree = 2250, metric = 'ROC', 
                   tuneGrid = rf_tune, trControl = ctrl, importance = T)
 
-     #rf_imp = varImp(rf_m)
      toc()
-   #+end_src
 
+
+     params <- list()
+     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
+                                             "RF tunned")
+
+     params$auc_val   <- max(rf_m$results$ROC)
+     params$ntree     <-  rf_m$finalModel$ntree
+     params$mtry     <-  rf_m$finalModel$mtry
+
+     ## rf_m <- readRDS("models/2017-01-26-lhof-rf_tunned.rds")
+     auc_es <- GetRAoPAUC(rf_m,train_es[,ind_vars],train_es$requester_received_pizza)
+     cat("auc_train_es:", auc_es)
+
+     SaveRAoPModel(rf_m,"rf_tunned",params,settings)
+
+   #+end_src
+   
 *** DONE Neura Network
 
     Eh provavel que nnet seja o mais sensivel ao sample size
@@ -543,9 +587,21 @@
                     verbose = F,
                     trControl = ctrl)
 
-     nnet_imp = varImp(nnet_m)
      toc()
 
+     params <- list()
+     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
+                                                  "nnet tunned")
+
+     params$auc_val   <- max(nnet_m$results$ROC)
+     params$decay     <- nnet_m$finalModel$tuneValue$decay
+     params$size     <-  nnet_m$finalModel$tuneValue$size
+
+     ## nnet_m <- readRDS("models/2017-01-26-lhof-nnet_tunned.rds")
+     auc_es <- GetRAoPAUC(nnet_m,train_es[,ind_vars],train_es$requester_received_pizza)
+     cat("auc_train_es:", auc_es)
+
+     SaveRAoPModel(nnet_m,"nnet_tunned",params,settings)
    #+end_src
 
 *** DONE SVM
@@ -581,16 +637,31 @@
 *** Simple Model
 
    #+begin_src R
-      ## --------------------------------- [ best simple model ]
+     ## --------------------------------- [ best simple model ]
 
-      tic("Training: Simple Model .....")
-      simple_m <- glm( requester_received_pizza ~ nword,# + community_age + requester_upvotes_minus_downvotes_at_request,
-                      family=binomial(link='logit'),
-                      data = train_tr)
+     set.seed(2014)
+     tic("Training: Simple model .....")
+     simple_m <- train(requester_received_pizza ~ nword,
+                           data = train_tr,
+                       method = 'glm', metric = 'ROC', trControl = ctrl)
 
-      toc()
 
-      simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
+     toc()
+
+     params <- list()
+     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
+                                             "Simple model Logistic regression using nword only.")
+
+     params$auc_val <- simple_m$results$ROC
+     params$features <- "nword"
+
+     auc_es <- GetRAoPAUC(simple_m,train_es[,ind_vars],train_es$requester_received_pizza)
+     cat("auc_train_es:", auc_es)
+
+     ## simple_m <- readRDS("models/2017-01-26-lhof-simple_tunned.rds")
+     SaveRAoPModel(simple_m,"simple_tunned",params,settings)
+
+     simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
    #+end_src
    
 *** Ensemble
