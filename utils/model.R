@@ -9,8 +9,9 @@
 ##  impolite and remember to cite the author and give him his credits.
 ##* ****************************************************************
 
-
 library(formula.tools, quietly = TRUE )
+library(jsonlite, quietly = TRUE )
+library(lubridate, quietly = TRUE )
 
 RAoPModel <- function(glm.formula, train.data, val.data){
 
@@ -83,3 +84,70 @@ GetRAoPAUC <- function(raop_model,X,y){
 
 
 
+PlotRAoPImportance <- function(logit_m, rf_m, gbm_m, nnet_m){
+
+
+    logit_imp = varImp(logit_m)
+    gbm_imp = varImp(gbm_m)
+    rf_imp = varImp(rf_m)
+    nnet_imp = varImp(nnet_m)
+    
+    ## plot importance
+    plot_imp <- function(model) {
+
+        ## data hangler
+        df = data.frame(model[[1]])
+        names(df) = 'importance'
+        df$variable = row.names(df)
+        
+        var_order = df$variable[order(df$importance)]
+        df$variable = factor(df$variable, levels = var_order)
+
+        p <- ggplot(df, aes(x = importance, y = variable)) +
+            geom_segment(aes(yend = variable), xend = 0, colour = 'grey50') +
+            geom_point(size = 3, colour = '#1d91c0') +
+        ggtitle(model[[2]]) + theme_bw() + guides(fill = F)
+        
+        return(p)
+    }
+    
+    p_logit_imp <- plot_imp(logit_imp)
+    p_rf_imp    <-      plot_imp(rf_imp)
+    p_gbm_imp   <- plot_imp(gbm_imp)
+    p_nnet_imp  <- plot_imp(nnet_imp)
+    ## p_svm_imp   <- plot_imp(svm_imp)
+
+    grid.arrange(p_logit_imp, p_rf_imp, p_gbm_imp, p_nnet_imp, top= 'Variable importance')
+
+}
+
+GetRAoPModelsCorrelation <- function(logit_m, gbm_m, rf_m, nnet_m){
+
+    pred_log  <- predict( object = logit_m, newdata = train_te, type = "prob")
+    pred_gbm  <- predict( object = gbm_m, newdata = train_te[, ind_vars], type = "prob") 
+    pred_rf   <- predict( object = rf_m, newdata = train_te, type = "prob")
+    pred_nnet <- predict( object = nnet_m, newdata = train_te, type = "prob")
+    
+
+    pred_log  <- pred_log$success  
+    pred_gbm  <- pred_gbm$success  
+    pred_rf   <- pred_rf$success  
+    pred_nnet <- pred_nnet$success  
+    
+    r_df <- cbind( pred_log, pred_gbm, pred_rf, pred_nnet)
+
+    C <-  cor(r_df)
+    
+    return(C)
+}
+
+
+GetRAopConfusionMatrix <- function(model_m, X, y){
+
+    pred_log  <- predict( object = model_m, newdata = X, type = "raw")
+
+    C <- confusionMatrix(pred_log, y)
+    
+    return(C)
+
+}

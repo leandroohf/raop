@@ -353,7 +353,7 @@
 
       set.seed(2014)
       train_ind = createDataPartition(train_m$requester_received_pizza,
-                                     p = .90, list = FALSE)
+                                     p = .50, list = FALSE)
 
       train_tr = train_m[train_ind,]  ## 50% to train each model
       train_es = train_m[-train_ind,] ## 50% to train ensemble model 
@@ -719,96 +719,28 @@
 
    #+begin_src R
      ## ------------------------------- [ Plot Var Importance ]
-
-     ## plot importance
-     plot_imp <- function(x) {
-
-         ## data hangler
-         df = data.frame(x[[1]])
-         names(df) = 'importance'
-         df$variable = row.names(df)
-
-         var_order = df$variable[order(df$importance)]
-         df$variable = factor(df$variable, levels = var_order)
-
-         p <- ggplot(df, aes(x = importance, y = variable)) +
-             geom_segment(aes(yend = variable), xend = 0, colour = 'grey50') +
-             geom_point(size = 3, colour = '#1d91c0') +
-         ggtitle(x[[2]]) + theme_bw() + guides(fill = F)
-
-         return(p)
-     }
-
-     p_logit_imp <- plot_imp(logit_imp)
-     p_rf_imp    <- plot_imp(rf_imp)
-     p_gbm_imp   <- plot_imp(gbm_imp)
-     p_nnet_imp  <- plot_imp(nnet_imp)
-     p_svm_imp   <- plot_imp(svm_imp)
-
-     grid.arrange(p_logit_imp, p_rf_imp, p_gbm_imp, p_nnet_imp, p_svm_imp, top= 'Variable importance')
+     PlotRAoPImportance(logit_m, rf_m, gbm_m, nnet_m)
 
      ## ---------------------------------- [ Comparing models ]
-     success  <- predict(simple_m, list(nword = train_te$nword),type="response")
-     simple_p <- data.frame(fail= 1.0 - success, success=success)
-     
-     pfail  <- sum(train_tr$requester_received_pizza == 'fail')/nrow(train_tr)
-     null_p <- data.frame(fail = rep(pfail, nrow(train_te)),
-                          success = rep(1.0 - pfail, nrow(train_te)))
+     ## compare models algorithms (legal esta metodo)
+     resamps <- resamples(list(LOGIT = logit_m,
+                               GBM = gbm_m,
+                               RF  = rf_m,
+                               NNET = nnet_m,
+                               SIMPLE = simple_m))
 
-     roc(train_te$requester_received_pizza, null_p$success) # random model
-     roc(train_te$requester_received_pizza, simple_p$success)
-     roc(train_te$requester_received_pizza, mean_p)
-     roc(train_te$requester_received_pizza, median_p)
-     roc(train_te$requester_received_pizza, stack_p$success)
+     summary(resamps)
 
-     ## --------------------------------------- [ Preditcions ]
+     bwplot(resamps, layout = c(1, 3))
 
-     pred_log  <- predict( object = logit_m, newdata = train_te, type = "prob")
-     pred_gbm  <- predict( object = gbm_m, newdata = train_te[, ind_vars], type = "prob") 
-     pred_rf   <- predict( object = rf_m, newdata = train_te, type = "prob")
-     pred_nnet <- predict( object = nnet_m, newdata = train_te, type = "prob")
-     ## pred_svm  <- predict( object = svm_m, newdata = train_te, type = "raw")
+     ## --------------------------------------- [ Correlations n  ]
 
-     pred_mean <- as.factor(mean_p > 0.5)
-     levels(pred_mean) = list("fail" = FALSE, "success" = TRUE)
+     GetRAopConfusionMatrix(logit_m, train_es[,ind_vars], train_es$requester_received_pizza)
+     GetRAopConfusionMatrix(gbm_m, train_es[,ind_vars], train_es$requester_received_pizza)
+     GetRAopConfusionMatrix(rf_m, train_es[,ind_vars], train_es$requester_received_pizza)
+     GetRAopConfusionMatrix(nnet_m, train_es[,ind_vars], train_es$requester_received_pizza)
 
-     ## pred_stacking <- gbm(Y ~ X:M1,M2,M3,M4)
-
-     pred_null <- as.factor(rep(FALSE, length(pred_log)))
-     levels(pred_null) = list("fail" = FALSE, "success" = TRUE)
-
-     pred_simple <- predict( object = simple_m, newdata = train_te, type = "link")
-     pred_simple <-  as.factor(pred_simple > 0.5)
-     levels(pred_simple) = list("fail" = FALSE, "success" = TRUE)
-
-     pred_random <- as.factor(runif(length(pred_log)) > 0.5 )
-     levels(pred_random) = list("fail" = FALSE, "success" = TRUE)
-
-     bool_log  <- pred_log == train_te$requester_received_pizza
-     bool_gbm  <- pred_gbm == train_te$requester_received_pizza
-     bool_rf   <- pred_rf == train_te$requester_received_pizza
-     bool_nnet <- pred_nnet == train_te$requester_received_pizza
-     ## bool_svm  <- pred_svm == train_te$requester_received_pizza
-     bool_mean <- pred_mean == train_te$requester_received_pizza
-
-     bool_null <- pred_null == train_te$requester_received_pizza
-     bool_simple <- pred_simple == train_te$requester_received_pizza
-     bool_random <- pred_random == train_te$requester_received_pizza
-
-     r_df <- cbind( train_te[, ind_vars],
-                   train_te$requester_received_pizza, bool_log,bool_gbm,
-                   bool_rf, bool_nnet, bool_mean, bool_null, bool_random) ## bool_svm)
-
-     confusionMatrix(pred_log, train_te$requester_received_pizza)
-     confusionMatrix(pred_gbm, train_te$requester_received_pizza)
-     confusionMatrix(pred_rf, train_te$requester_received_pizza)
-     confusionMatrix(pred_nnet, train_te$requester_received_pizza)
-     ##confusionMatrix(pred_svm, train_te$requester_received_pizza)
-
-     confusionMatrix(pred_null, train_te$requester_received_pizza)
-     confusionMatrix(pred_mean, train_te$requester_received_pizza)
-
-     cor(r_df[,c("bool_log","bool_gbm","bool_rf","bool_nnet")])
+     GetRAoPModelsCorrelation(logit_m, gbm_m, rf_m, nnet_m)
 
     #+end_src
   
@@ -823,7 +755,7 @@
                                GBM = gbm_m,
                                RF  = rf_m,
                                NNET = nnet_m,
-                               SVM = svm_m))
+                               SIMPLE = simple_m))
 
      summary(resamps)
 
