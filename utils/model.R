@@ -151,3 +151,16 @@ GetRAopConfusionMatrix <- function(model_m, X, y){
     return(C)
 
 }
+
+RAoPStackEnsembleDataPrepare <- function(train_data, ind_vars, logit_m, gbm_m, rf_m, nnet_m){
+
+    ## X is predictors. Data whithout response variable
+    
+    train_data$logit_prob <-  predict(logit_m, train_data[,ind_vars], type = 'prob')$success
+    train_data$rf_prob    <-  predict(rf_m, train_data[,ind_vars], type = 'prob')$success
+    train_data$gbm_prob   <-  predict(gbm_m, train_data[,ind_vars],type ='prob')$success
+    train_data$nnet_prob  <-  predict(nnet_m, train_data[,ind_vars], type = 'prob')$success
+    ##train_te$svm_prob   <-  predict(svm_m, train_te[, ind_vars], type = 'prob')
+
+    return(train_data)
+}

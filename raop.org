@@ -558,18 +558,21 @@
      toc()
 
      params <- list()
-     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
-                                                  "nnet tunned")
+     params <- CreateRAoPModelDefaultsParams(params,train_data = train_es,
+                                                  "stack gbm tunned")
 
-     params$auc_val   <- max(nnet_m$results$ROC)
-     params$decay     <- nnet_m$finalModel$tuneValue$decay
-     params$size     <-  nnet_m$finalModel$tuneValue$size
 
-     ## nnet_m <- readRDS("models/2017-01-26-lhof-nnet_tunned.rds")
-     auc_es <- GetRAoPAUC(nnet_m,train_es[,ind_vars],train_es$requester_received_pizza)
+     params$auc_val   <- max(stack_m$results$ROC)
+     params$ntree     <- stack_m$finalModel$n.trees
+     params$depth     <- stack_m$finalModel$interaction.depth
+     params$shrinkage <- stack_m$finalModel$n.trees
+
+
+     ## stack_m <- readRDS("models/2017-01-29-lhof-stack_tunned.rds")
+     auc_es <- params$auc_val
      cat("auc_train_es:", auc_es)
 
-     SaveRAoPModel(nnet_m,"nnet_tunned",params,settings)
+     SaveRAoPModel(stack_m,"stack_tunned",params,settings)
    #+end_src
 
 *** DONE SVM
@@ -632,7 +635,9 @@
      simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
    #+end_src
    
-*** Ensemble
+*** DONE Ensemble
+
+    [[file:scratch/2017-01-29-stack_gbm_depth2_ntree1700_auc0.832.png]]
 
    #+begin_src R
 
@@ -650,38 +655,40 @@
 
      ## ----------------------------------- [ Ensemble Stack  ]
 
-     train_te$logit_prob <-  predict(logit_m, train_te[, ind_vars], type = 'prob')$success
-     train_te$rf_prob    <-  predict(rf_m, train_te[, ind_vars], type = 'prob')$success
-     train_te$gbm_prob   <-  predict(gbm_m, train_te[, ind_vars],type ='prob')$success
-     train_te$nnet_prob  <-  predict(nnet_m, train_te[, ind_vars], type = 'prob')$success
-     #train_te$svm_prob   <-  predict(svm_m, train_te[, ind_vars], type = 'prob')
+     train_te <- RAoPStackEnsembleDataPrepare(train_te,ind_vars,logit_m, gbm_m, rf_m, nnet_m)
+     train_es <- RAoPStackEnsembleDataPrepare(train_es,ind_vars,logit_m, gbm_m, rf_m, nnet_m)
 
-     train_es$logit_prob <- predict(logit_m, train_es[, ind_vars], type = 'prob')$success
-     train_es$rf_prob    <- predict(rf_m, train_es[, ind_vars], type = 'prob')$success
-     train_es$gbm_prob   <- predict(gbm_m, train_es[, ind_vars],type ='prob')$success
-     train_es$nnet_prob  <- predict(nnet_m, train_es[, ind_vars], type = 'prob')$success
-     #train_es$svm_prob   <- predict(svm_m, train_es[, ind_vars], type = 'prob')
-
-
-     stack_tune = expand.grid( interaction.depth = seq(1, 5, 2),
-                            n.trees = seq(500, 2000, 500),
-                            shrinkage = c(.01, .1),
+     stack_tune = expand.grid( interaction.depth = c(1,2,3),
+                            n.trees = seq(1600, 1800, 10),
+                            shrinkage = c(.01),
                             n.minobsinnode = 9)
 
      set.seed(2014)
      tic("Training: Ensemble GBM ....")
 
      stack_vars <- names(train_es)[names(train_es) != labelName ]
+
      stack_m  <- train(x = train_es[, stack_vars], y = train_es$requester_received_pizza,
                        method = 'gbm', tuneGrid = stack_tune,
                        metric = 'ROC', verbose = F, trControl = ctrl)
 
+     params <- list()
+     params <- CreateRAoPModelDefaultsParams(params,train_data = train_es,
+                                             "stack gbm tunned")
 
-     stack_p   <- predict(stack_m, train_te[, stack_vars], type = 'prob')
+     params$auc_val   <- max(stack_m$results$ROC)
+     params$depth     <- stack_m$finalModel$tuneValue$decay
+     params$size     <-  stack_m$finalModel$tuneValue$size
+
+     auc_es <- GetRAoPAUC(stack_m,train_es[,ind_vars],train_es$requester_received_pizza)
+     cat("auc_train_es:", auc_es)
+
+     ## stack_m <- readRDS("models/2017-01-29-lhof-stack_tunned.rds")
+     SaveRAoPModel(stack_m,"stack_tunned",params,settings)
 
    #+end_src
    
-*** Comparing Models
+*** DONE Comparing Models
 
     Mudar para proxima secao depois
 
@@ -695,7 +702,8 @@
                                GBM = gbm_m,
                                RF  = rf_m,
                                NNET = nnet_m,
-                               SIMPLE = simple_m))
+                               SIMPLE = simple_m,
+                               STACK = stack_m))
 
      summary(resamps)
 
