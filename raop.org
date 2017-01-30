@@ -477,38 +477,6 @@
 
    #+end_src
 
-
-   #+begin_src R
-
-     preprocess_params <- preProcess(train_tr, method=c("center", "scale"))
-     train_tr_pre <- predict(preprocess_params, train_tr )
-
-     ## Restoring defalts boolen variables value
-     train_tr_pre[,"has.link"]                  <-  train_tr[,"has.link"]
-     train_tr_pre[,"gratitude"]                 <-  train_tr[,"gratitude"]
-     train_tr_pre[,"reciprocity"]               <-  train_tr[,"reciprocity"]
-     train_tr_pre[,"is.weekend"]                <-  train_tr[,"is.weekend"]
-     train_tr_pre[,"first.half.of.month"]       <-  train_tr[,"first.half.of.month"]
-     train_tr_pre[,"posted.raop.before"]        <-  train_tr[,"posted.raop.before"]
-     train_tr_pre[,"requester_received_pizza" ] <-  train_tr[,"requester_received_pizza" ]
-
-     ## ----------------------------------------------- [ GBM ]
-     gbm_tune = expand.grid( interaction.depth = c(2, 3, 4),
-                            n.trees = c(500, 1000, 1500, 2000, 2500, 3000),
-                            shrinkage = c(.001, .005),
-                            n.minobsinnode = 9)
-
-     set.seed(2014)
-     tic("Training: GBM .....")
-     gbm_m = train(x = train_tr_pre[, ind_vars], y = train_tr_pre$requester_received_pizza,
-                   method = 'gbm', tuneGrid = gbm_tune,
-                   metric = 'ROC', verbose = F, trControl = ctrl)
-
-     #gbm_imp = varImp(gbm_m)
-     toc()
-
-   #+end_src
-
 *** DONE Random Forest
     
     | mtry | ntree |    AUC | comm                                         |
@@ -634,7 +602,7 @@
       toc()
    #+end_src
 
-*** Simple Model
+*** DONE Simple Model
 
    #+begin_src R
      ## --------------------------------- [ best simple model ]
