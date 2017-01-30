@@ -164,3 +164,54 @@ RAoPStackEnsembleDataPrepare <- function(train_data, ind_vars, logit_m, gbm_m, r
 
     return(train_data)
 }
+
+RAoPPermutationTest <- function(X, y, nperm) {
+
+    nrows <- nrow(X)
+
+    ## ----------------------------------------------- [ GBM ]
+    ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
+
+    gbm_tune <- expand.grid( interaction.depth = c(6,7,8),
+                            n.trees = c(750, 800, 850),
+                            shrinkage = c(.005),
+                            n.minobsinnode = 9)
+    
+    aucs <- numeric(nperm)
+    for(i in seq_len(nperm)) {
+        cat("interation: ", i, "\n")
+        ## random order of rows
+        yl = sample(y, size=nrows, replace=FALSE)
+
+        gbm_m <- train(x = X, y = yl,
+                       method = 'gbm', tuneGrid = gbm_tune,
+                       metric = 'ROC', verbose = F, trControl = ctrl)
+
+        aucs[i] <- max(gbm_m$results$ROC)
+    }
+    return(aucs)
+}
+
+RAoPGetStackMedianPrediction <- function(X, ptype, logit_m, rf_m, gbm_m, nnet_m){
+
+    logit_p <- predict(logit_m,X, type = ptype)
+    rf_p    <- predict(rf_m,   X, type = ptype)
+    gbm_p   <- predict(gbm_m,  X, type = ptype)
+    nnet_p  <- predict(nnet_m, X, type = ptype)
+
+    median_p <- apply(cbind(logit_p$success,rf_p$success,gbm_p$success,nnet_p$success),1,median)
+
+    return(median_p)
+}
+
+RAoPGetStackMeanPrediction <- function(X, ptype, logit_m, rf_m, gbm_m, nnet_m){
+
+    logit_p <- predict(logit_m,X, type = ptype)
+    rf_p    <- predict(rf_m,   X, type = ptype)
+    gbm_p   <- predict(gbm_m,  X, type = ptype)
+    nnet_p  <- predict(nnet_m, X, type = ptype)
+
+    mean_p <- (logit_p$success + rf_p$success + gbm_p$success + nnet_p$success) / 4
+
+    return(mean_p)
+}

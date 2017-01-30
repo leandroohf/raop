@@ -638,21 +638,7 @@
 *** DONE Ensemble
 
     [[file:scratch/2017-01-29-stack_gbm_depth2_ntree1700_auc0.832.png]]
-
    #+begin_src R
-
-     ## --------------------------------- [ Ensemble Baggging ]
-     ## combine results
-
-     logit_p <- predict(logit_m, train_te[, ind_vars], type = 'prob')
-     rf_p    <- predict(rf_m, train_te[, ind_vars], type = 'prob')
-     gbm_p   <- predict(gbm_m, train_te[, ind_vars], type = 'prob')
-     nnet_p  <- predict(nnet_m, train_te[, ind_vars], type = 'prob')
-     #svm_p   <- predict(svm_m, train_te[, ind_vars], type = 'prob')   
-
-     mean_p <- (logit_p$success + rf_p$success + gbm_p$success + nnet_p$success) / 4
-     median_p <- apply(cbind(logit_p$success,rf_p$success,gbm_p$success,nnet_p$success),1,median)
-
      ## ----------------------------------- [ Ensemble Stack  ]
 
      train_te <- RAoPStackEnsembleDataPrepare(train_te,ind_vars,logit_m, gbm_m, rf_m, nnet_m)
@@ -687,7 +673,7 @@
      SaveRAoPModel(stack_m,"stack_tunned",params,settings)
 
    #+end_src
-   
+
 *** DONE Comparing Models
 
     Mudar para proxima secao depois
@@ -734,10 +720,24 @@
      bwplot(resamps, layout = c(1, 1)) # 3 plots with sens, spec n auc on separated window
    #+end_src
   
-** Diagnostics
+   #+begin_src R
+
+     ## --------------------------------- [ Ensemble Baggging ]
+     ## combine results
+
+     median_p <- RAoPGetStackMedianPrediction(train_te[,ind_vars], 'prob', logit_m, rf_m, gbm_m, nnet_m)
+     mean_p   <- RAoPGetStackMeanPrediction(train_te[,ind_vars], 'prob', logit_m, rf_m, gbm_m, nnet_m)
+
+    roc(train_te$requester_received_pizza,mean_p)
+    roc(train_te$requester_received_pizza,median_p)
+    cat(GetRAoPAUC(stack_m,train_te[,stack_vars],train_te$requester_received_pizza))
+
+   #+end_src
+
+** DONE Diagnostics
   
    Como adicionar alguma metrica mais simples como por exemplo
-   precision or
+   precision orp
 
    *=================================*
 
@@ -747,43 +747,6 @@
    Ou fazer apenas bem simples com 7 intercaoes
 
     #+begin_src R
-
-      RAoPPermutationTest <- function(X, y, nperm) {
-
-          nrows <- nrow(X)
-          ## y <- dataf[[ycol]]
-          ## X = dataf[, setdiff(colnames(dataf), ycol), drop=FALSE]
-          ## varnames = colnames(X)
-
-          ## fmla = paste("y", paste(varnames, collapse=" + "), sep=" ~ ")
-
-          ## ----------------------------------------------- [ GBM ]
-          ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
-
-          gbm_tune <- expand.grid( interaction.depth = c(6,7,8),
-                                  n.trees = c(750, 800, 850),
-                                  shrinkage = c(.005),
-                                  n.minobsinnode = 9)
-    
-          aucs <- numeric(nperm)
-          for(i in seq_len(nperm)) {
-              cat("interation: ", i, "\n")
-              ## random order of rows
-              ##yl = sample(y, size=nrows, replace=FALSE)
-              yl = sample(y, size=nrows, replace=FALSE)
-
-              ##yl <- y[y_ord]
-              gbm_m <- train(x = X, y = yl,
-                             method = 'gbm', tuneGrid = gbm_tune,
-                             metric = 'ROC', verbose = F, trControl = ctrl)
-
-        
-              #print(summary(gbm_m))
-              aucs[i] <- max(gbm_m$results$ROC)
-          }
-          return(aucs)
-      }
-
      tic("Permutation test:.....")
      ## XXX nperm = 128 takes 47 minutes
      vauc <- RAoPPermutationTest(train_tr[,ind_vars], train_tr$requester_received_pizza, 128)
@@ -792,7 +755,6 @@
      saveRDS(vauc,"scratch/2017-01-29-lhof-permutation_test_vauc.rds")
      hist(vauc)
     #+end_src
-
 
 * Conclusion
 
