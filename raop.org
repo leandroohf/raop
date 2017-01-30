@@ -719,11 +719,6 @@
      GetRAoPModelsCorrelation(logit_m, gbm_m, rf_m, nnet_m)
 
     #+end_src
-  
-** Diagnostics
-  
-   Como adicionar alguma metrica mais simples como por exemplo
-   precision or
 
    #+begin_src R
      ## compare models algorithms (legal esta metodo)
@@ -736,11 +731,72 @@
      summary(resamps)
 
      bwplot(resamps, layout = c(1, 3))
+     bwplot(resamps, layout = c(1, 1)) # 3 plots with sens, spec n auc on separated window
    #+end_src
+  
+** Diagnostics
+  
+   Como adicionar alguma metrica mais simples como por exemplo
+   precision or
 
+   *=================================*
 
-   =================================
+   Permutation test. No final nao parece ser tao util pois dependendo
+   do resultados do da analise exploratorio acho que nao faz sentido fazer.
 
-   Permutation test 
+   Ou fazer apenas bem simples com 7 intercaoes
+
+    #+begin_src R
+
+      RAoPPermutationTest <- function(X, y, nperm) {
+
+          nrows <- nrow(X)
+          ## y <- dataf[[ycol]]
+          ## X = dataf[, setdiff(colnames(dataf), ycol), drop=FALSE]
+          ## varnames = colnames(X)
+
+          ## fmla = paste("y", paste(varnames, collapse=" + "), sep=" ~ ")
+
+          ## ----------------------------------------------- [ GBM ]
+          ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
+
+          gbm_tune <- expand.grid( interaction.depth = c(6,7,8),
+                                  n.trees = c(750, 800, 850),
+                                  shrinkage = c(.005),
+                                  n.minobsinnode = 9)
+    
+          aucs <- numeric(nperm)
+          for(i in seq_len(nperm)) {
+              cat("interation: ", i, "\n")
+              ## random order of rows
+              ##yl = sample(y, size=nrows, replace=FALSE)
+              yl = sample(y, size=nrows, replace=FALSE)
+
+              ##yl <- y[y_ord]
+              gbm_m <- train(x = X, y = yl,
+                             method = 'gbm', tuneGrid = gbm_tune,
+                             metric = 'ROC', verbose = F, trControl = ctrl)
+
+        
+              #print(summary(gbm_m))
+              aucs[i] <- max(gbm_m$results$ROC)
+          }
+          return(aucs)
+      }
+
+     tic("Permutation test:.....")
+     ## XXX nperm = 128 takes 47 minutes
+     vauc <- RAoPPermutationTest(train_tr[,ind_vars], train_tr$requester_received_pizza, 128)
+     toc()
+
+     saveRDS(vauc,"scratch/2017-01-29-lhof-permutation_test_vauc.rds")
+     hist(vauc)
+    #+end_src
+
 
 * Conclusion
+
+  #+begin_src R
+    print('Final Model AUC:')
+    cat(GetRAoPAUC(stack_m,train_te[,stack_vars],train_te$requester_received_pizza))
+  #+end_src
