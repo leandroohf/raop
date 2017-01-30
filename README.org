@@ -945,7 +945,7 @@ testandos os narratives scores
 
 #+END_SRC
 
-**  Model adjust [2016-07-03 Sun]
+** Model adjust [2016-07-03 Sun]
 
    Vou apenas tratar karma. removendo outliers
    
