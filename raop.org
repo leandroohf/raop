@@ -1,14 +1,17 @@
 
 
 * Introduction
-
-  Eu vou basear bem no Rpub
+  
+  
+  
+  Code based on the links below:
   http://www.runzemc.com/2014/08/random-acts-of-pizza.html
   https://rpubs.com/kuhnrl30/RAOP
 
+  TODOs
   * Explain waht is RAoP
   * Discuss a little about article reference
-  * Discuss what we decided to do n why
+  * Discuss what we decided to do and why
     
 * Data
 
@@ -19,17 +22,15 @@
     
   ================================= Importante
 
-  Explicar pq converti para Decile e pq nao considerei valores negativos
-  E o motivo foi que para narrative score, muitas narrativas nao pontua gerando 
-  uma concentracao no em zero e assim gera discontinidade na distribuicao dos scores
-  Ex: 1000 posts com 0 decile e depois 7 decile com 100, 8 com 200 3 assim eu tenho
-  a dist do restante dos potnos. 
+  * Explain all data transformation
+    * convert to decile
+    * why i did not consider negative values
 
-
-  ## So zero freq in narrative score are represented as 0 decile
-  ## Also affect negative sentiment score but It seems 
-
-    
+      Many narratives has zero score resulting in an concentration in
+      the decile zero.
+      
+      Ex: 100 posts in 0th decile and 5 posts in 7th decile.
+      
   #+BEGIN_SRC R :session :tangle raop.R :results none
     ##* ****************************************************************
     ##  Programmer[s]: Leandro Fernandes
@@ -62,7 +63,7 @@
 
 * Exploratory
 
-  plot graphs that I found on Rpubs
+  Select main contribution or changes only
   
   #+BEGIN_SRC R :session :tangle exp.R
     data.view <- data.target %>%
@@ -273,16 +274,7 @@
 
 * Model
 ** Development
-   Add model creation code and some comments
-
-   glm: 5 min; 6 cores: 1. second
-   gbm: 30 min; 6 cores: 1.7 min
-   rf: 30 min; 6 cores: 6.3 min; 7 cores: 6.0 min
-   nnet: 4 min; 6 cores: 0.87 min
-
-   O ganho com 7 nao eh muito mas a maquina ainda fica utilizavel
-   enquanto eu rodo os experimentos
-
+   
 *** Data design (train, test n ensenble dataset)
 
     #+begin_src R
@@ -370,10 +362,13 @@
       ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
     #+end_src
 
-*** DONE Logistic Regredssion
+*** Logistic Regredssion
 
     Meu melhor modelo e aparentemente melhor do que o blog que esu
     estava seguindo e com bem menos variaveis com AUC maios
+
+    My best model looks like is better than my references (blog) but
+    with small number of predictors
 
     AUC: 0.675 vs 0.669 (paper) vs 0.664 (blog)
 
@@ -409,36 +404,23 @@
 
    #+end_src
 
-*** DONE GBM
+*** GBM
 
-    +*TODO* (Unica coisa q pode explicar o rsultado anterior. senao der desiste)+
-    Vou adicionar a dummy>money.score: money.score > 4 => 1
-    
-    +*TODO*  Se o anterior funcionar tentar+ Nao vou tentar
-    desire.money < 3 => 1
-    desire.money >=3 and < 8 => 2
-    desire.money >= 8 => 3
-    
-    *Por incrivel que pareca piorou a situacao*
     
     Como eu melhore este resultado? Preciso fazer os graficos de tunning do caret
 
+    Do this plot form caret tutorials.
+
     http://topepo.github.io/caret/model-training-and-tuning.html
-    
-    pergunto se eu fizer scale n center (standardize vars) vou ter um melhor resultado?
     http://machinelearningmastery.com/pre-process-your-dataset-in-r/
+    
 
-
-    Sem preprocessing o melhor que eu consegui foi
-
-    shrinkage: 0.005; ntree: 1500; depth: 4; auc: 0.75; time: ~2.0 minutos
+    lost tunned model
+    shrinkage: 0.005; ntree: 1500; depth: 4; auc: 0.75; time: ~2.0 minute
     [[file:scratch/gbm_shr0.005_ntree1500_depth4_auc0.75.png]]
 
-    ---------------------------------
-    Nao consegui reproduzir resultado anterior e aprentemente nehuma
-    transformacs de cente e scale ajudou a melhorar o resultado
-
-    shrinkage: 0.005; ntree: 800; depth: 7; auc: 0.693; time: ~1.0 minutos
+    
+    shrinkage: 0.005; ntree: 800; depth: 7; auc: 0.693; time: ~1.0 minute
     [[file:scratch/gbm_shr0.005_ntree800_depth7_auc0.693.png]]
 
 
@@ -477,29 +459,24 @@
 
    #+end_src
 
-*** DONE Random Forest
+*** Random Forest
     
-    | mtry | ntree |    AUC | comm                                         |
-    |------+-------+--------+----------------------------------------------|
-    |    3 |   300 |  0.675 |                                              |
-    |    2 |  1000 |  0.676 |                                              |
-    |    2 |  1500 | 0.6759 |                                              |
-    |    2 |  1750 | 0.6761 |                                              |
-    |    2 |  2000 |  0.678 | best                                         |
-    |    2 |  2250 |  0.675 |                                              |
-    |    2 |  2500 |  0.676 |                                              |
-    |    3 |  3000 |  0.676 | pouco melhor do q 2; 3000 no mesmo graficoxs |
-    |      |  4500 |        |                                              |
-    |------+-------+--------+----------------------------------------------|
+    | mtry | ntree |    AUC | comm |
+    |------+-------+--------+------|
+    |    3 |   300 |  0.675 |      |
+    |    2 |  1000 |  0.676 |      |
+    |    2 |  1500 | 0.6759 |      |
+    |    2 |  1750 | 0.6761 |      |
+    |    2 |  2000 |  0.678 | best |
+    |    2 |  2250 |  0.675 |      |
+    |    2 |  2500 |  0.676 |      |
+    |    3 |  3000 |  0.676 |      |
+    |      |  4500 |        |      |
+    |------+-------+--------+------|
 
-    =================================
-    [2017-01-22 Sun]
-    dim(train_r):  4085   21
     
-    mtry: 3; ntree: 2250; auc: 0.680
+    mtry: 2; ntree: 2000; auc: 0.680
     
-    =================================
-
    #+begin_src R
      ## ------------------------------------- [ Random Forest ]
      #random forests (mtry = 2, roc = .656)
@@ -530,18 +507,13 @@
 
    #+end_src
    
-*** DONE Neura Network
+*** Neura Network
 
-    Eh provavel que nnet seja o mais sensivel ao sample size
+    Probably the neural network is the one most affetcted by the
+    sample size
     
-    [2017-01-22 Sun]
-    dim(train_r):  4085   21
-    decay3; size4; auc0.679
+    file:scratch/2017-01-22-lhof-nnet_decay3_size4_auc0.693.png
     
-    [[file:scratch/2017-01-22-nnet-decay3-size4-auc0.693.png]]
-    
-    =================================
-
    #+begin_src R
      ## ------------------------------------ [ Neural Network ]
      #nnet (size = 4, decay = 2, roc = .669)
@@ -575,15 +547,15 @@
      SaveRAoPModel(stack_m,"stack_tunned",params,settings)
    #+end_src
 
-*** DONE SVM
+*** SVM
 
-   [2017-01-22 Sun]
+
+    Model with low performance compared to the others.
+    Do not include it in the analysis.
+
+    [2017-01-22 Sun]
     dim(train_r):  4085   21
-
-
-    Peerformnace muita baixa comparadao aos outros modelos.
-    Acho que nao vale apena tunar
-
+    
    #+begin_src R
       ## ----------------------------------------------- [ SVM ]
 
@@ -605,39 +577,45 @@
       toc()
    #+end_src
 
-*** DONE Simple Model
+*** Simple Model
+    
+    Best model with single predictor
 
    #+begin_src R
-     ## --------------------------------- [ best simple model ]
+          ## --------------------------------- [ best simple model ]
 
-     set.seed(2014)
-     tic("Training: Simple model .....")
-     simple_m <- train(requester_received_pizza ~ nword,
-                           data = train_tr,
-                       method = 'glm', metric = 'ROC', trControl = ctrl)
+          set.seed(2014)
+          tic("Training: Simple model .....")
+          simple_m <- train(requester_received_pizza ~ nword,
+                                data = train_tr,
+                            method = 'glm', metric = 'ROC', trControl = ctrl)
 
 
-     toc()
+          toc()
 
-     params <- list()
-     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
-                                             "Simple model Logistic regression using nword only.")
+          params <- list()
+          params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
+                                                  "Simple model Logistic regression using nword only.")
 
-     params$auc_val <- simple_m$results$ROC
-     params$features <- "nword"
+          params$auc_val <- simple_m$results$ROC
+          params$features <- "nword"
+     
+          auc_es <- GetRAoPAUC(simple_m,train_es[,ind_vars],train_es$requester_received_pizza)
+          cat("auc_train_es:", auc_es)
 
-     auc_es <- GetRAoPAUC(simple_m,train_es[,ind_vars],train_es$requester_received_pizza)
-     cat("auc_train_es:", auc_es)
+          ## simple_m <- readRDS("models/2017-01-26-lhof-simple_tunned.rds")
+          SaveRAoPModel(simple_m,"simple_tunned",params,settings)
 
-     ## simple_m <- readRDS("models/2017-01-26-lhof-simple_tunned.rds")
-     SaveRAoPModel(simple_m,"simple_tunned",params,settings)
-
-     simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
+          simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
    #+end_src
    
-*** DONE Ensemble
+*** Ensemble
+    
 
-    [[file:scratch/2017-01-29-stack_gbm_depth2_ntree1700_auc0.832.png]]
+    Ensemble model: lo
+
+    file:scratch/2017-01-29-lhof-stack_gbm_depth2_ntree1700_auc0.832.png
+
    #+begin_src R
      ## ----------------------------------- [ Ensemble Stack  ]
 
@@ -674,9 +652,9 @@
 
    #+end_src
 
-*** DONE Comparing Models
+*** Comparing Models
 
-    Mudar para proxima secao depois
+    Change to the diagnostic section
 
    #+begin_src R
      ## ------------------------------- [ Plot Var Importance ]
@@ -734,19 +712,13 @@
 
    #+end_src
 
-** DONE Diagnostics
-  
-   Como adicionar alguma metrica mais simples como por exemplo
-   precision orp
-
-   *=================================*
-
-   Permutation test. No final nao parece ser tao util pois dependendo
-   do resultados do da analise exploratorio acho que nao faz sentido fazer.
-
-   Ou fazer apenas bem simples com 7 intercaoes
-
-    #+begin_src R
+** Diagnostics
+   
+   Permutation test. Explain what is this test. And why I did.  Reason
+   is to get familiar with the test. In this case was not useful or
+   necessary to do it.
+   
+   #+begin_src R
      tic("Permutation test:.....")
      ## XXX nperm = 128 takes 47 minutes
      vauc <- RAoPPermutationTest(train_tr[,ind_vars], train_tr$requester_received_pizza, 128)

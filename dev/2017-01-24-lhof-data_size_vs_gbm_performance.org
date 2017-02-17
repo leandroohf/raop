@@ -91,15 +91,6 @@
 
 * GBM
   
-  ---------------------------------
-  Nao consegui reproduzir resultado anterior e aprentemente nehuma
-  transformacs de cente e scale ajudou a melhorar o resultado
-
-  shrinkage: 0.005; ntree: 800; depth: 7; auc: 0.693; time: ~1.0 minutos
-  
-  [[file:scratch/gbm_shr0.005_ntree800_depth7_auc0.693.png]]
-
-
  #+begin_src R
 
    ## ----------------------------------------------- [ GBM ]
@@ -135,8 +126,6 @@
 
 * Experiment
   
-  *Refazendo pois estava reportando validation erro do k fold no lugar do train-erro q eh muito melhor*
-
  | train percentage of train_m | test size | train size | train auc | train val | test auc | ntree | depth | shrinkage |
  |-----------------------------+-----------+------------+-----------+-----------+----------+-------+-------+-----------|
  |                        0.99 |      1133 |       4493 |    0.7444 | 0.6893191 |   0.7339 |  1000 |     5 |     0.005 |
@@ -151,3 +140,5 @@
  |                        0.10 |      1133 |        454 |    0.8777 | 0.6437440 |   0.6908 |   500 |     5 |     0.005 |
  |                        0.01 |      1133 |         47 |     0.831 | 0.6916667 |   0.6183 |   400 |     6 |     0.005 |
  |-----------------------------+-----------+------------+-----------+-----------+----------+-------+-------+-----------|
+
+ file:../scratch/2017-01-23-lhof-performance_vs_data_size_graph.xlsx
