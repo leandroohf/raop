@@ -265,9 +265,9 @@
      grid.arrange (p.left, p.right, ncol=2)
 
    #+END_SRC
-
+   
 * Outliers 
 
-  Para justificar os cortes
 
-  * Posso tentar Box cox tranformation
+
+
