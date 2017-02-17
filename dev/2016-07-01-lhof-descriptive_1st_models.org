@@ -51,7 +51,7 @@ requester_account_age_in_days_at_request requester_days_since_first_post_on_raop
  Max.   :5.00000                              Max.   :155010                                                  Max.   :1411.00   Max.   : 27.000  
 #+END_EXAMPLE
 
-* Dev 
+* Dev
 ** Dev [2016-07-01 Fri]
 
    #+BEGIN_SRC R
