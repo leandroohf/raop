@@ -712,6 +712,8 @@
 
    #+end_src
 
+   [[file:scratch/2017-01-29-lhof-models_comparative_auc.png]]
+   
 ** Diagnostics
    
    Permutation test. Explain what is this test. And why I did.  Reason
