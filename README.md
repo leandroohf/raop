@@ -1,47 +1,44 @@
 
-# WIP: Work in progress
+# Random Act of Pizaa: (WIP)
+    
+**This is a work in progress**
 
+In this project data from online community Random Act of Pizza (RAoP)
+forum was analyzed. The data is a collection of post where reddit's
+users are requesting free pizza. Sentimental analyses were performed
+in the data and the findings were used to build a model to predict if
+the post written by the user will be successful. A better explanation
+with more detail can be found in the links below.
     
-    This is a work in progress.
-    
-    Analyzing data from online community Random Act of pizza forum to
-    predict post where the success of users that are asking for free
-    pizza. A better explanation with more detail can be found in the
-    links belows.
-    
-    Link to reference:to 
-    [I'm an inline-style link](https://www.google.com)
+[Stanford article](http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf)
 
-    [http://www.runzemc.com/2014/08/random-acts-of-pizza.html](http://www.runzemc.com/2014/08/random-acts-of-pizza.html)
+Link to references: 
+[http://www.runzemc.com/2014/08/random-acts-of-pizza.html](http://www.runzemc.com/2014/08/random-acts-of-pizza.html)
 
-    Stanford article:
-    [http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf](http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf)
-    
-    Link for data source 
-    [https://snap.stanford.edu/data/web-RedditPizzaRequests.html](https://snap.stanford.edu/data/web-RedditPizzaRequests.html)
-    
-    Link for redidt forum
-    [https://www.reddit.com/r/Random_Acts_Of_Pizza/](https://www.reddit.com/r/Random_Acts_Of_Pizza/)
+Link for data source 
+[https://snap.stanford.edu/data/web-RedditPizzaRequests.html](https://snap.stanford.edu/data/web-RedditPizzaRequests.html)
+
+Link for redidt forum
+[https://www.reddit.com/r/Random_Acts_Of_Pizza/](https://www.reddit.com/r/Random_Acts_Of_Pizza/)
 
 ## Learn goals
 
-    1. Get familiar with sentimental anlaysys 
-    2. Improve expertise in tune machine learning models
-    3. Gain expertise with ensemble techniques
-    4. Test new diagnostic tools Permutation test
-    5. Get familiar woth Ariflow
+1. Get familiar with sentimental anlaysys 
+2. Improve expertise in tune machine learning models
+3. Gain expertise with ensemble techniques
+4. Test new diagnostic tools Permutation test
+5. Get familiar woth Ariflow
 
 ## Run steps to predict
 
-    NOT entired ready yet
-    
-    
-    Link for dev org file:
-    [raop.org](raop.org)
-    
+NOT entired ready yet
 
- * pred.R
- * Optional
-   * data_wrangler.R (Features engineering)
-   * descriptive.R (summary data and do some plots)
-   * model_dev.R (to see the model and some model diagnostics)
+
+Link for dev org file:
+[raop.org](raop.org)
+    
+* pred.R
+* Optional
+  * data_wrangler.R (Features engineering)
+  * descriptive.R (summary data and do some plots)
+  * model_dev.R (to see the model and some model diagnostics)
