@@ -2,26 +2,45 @@
 
 * Introduction
   
-  
-  
+  In this project data from online community Random Act of Pizza
+  (RAoP) forum was analyzed. The data is a collection of post where
+  reddit's users are requesting free pizza. Sentimental analyses were
+  performed in the data and the findings were used to build a model to
+  predict if the post written by the user will be successful. A better
+  explanation with more detail can be found in the links below.
+
+
   Code based on the links below:
   http://www.runzemc.com/2014/08/random-acts-of-pizza.html
   https://rpubs.com/kuhnrl30/RAOP
 
-  TODOs
+  *TODOs*
   * Explain waht is RAoP
   * Discuss a little about article reference
   * Discuss what we decided to do and why
-    
+
+  Learn goals:
+
+  1. Get familiar with sentimental anlaysys 
+  2. Improve expertise in tune machine learning models
+  3. Gain expertise with ensemble techniques
+  4. Test new diagnostic tools Permutation test
+  5. Get familiar with Ariflow (**TODO**)
+
+
 * Data
 
-  * Explain what I did in descriptive
+  * mostrar a cara do dado
+  * 
 
     We select the variable in the target data frame below for the
     exploratory analysis
     
   ================================= Importante
 
+  * MOstra a cara do dado
+    * post exemplos
+    * head dataframe
   * Explain all data transformation
     * convert to decile
     * why i did not consider negative values
@@ -32,17 +51,6 @@
       Ex: 100 posts in 0th decile and 5 posts in 7th decile.
       
   #+BEGIN_SRC R :session :tangle raop.R :results none
-    ##* ****************************************************************
-    ##  Programmer[s]: Leandro Fernandes
-    ##  Company/Institution:
-    ##  email: leandroohf@gmail.com
-    ##  Date: June 20, 2016
-    ##  
-    ##  The author believes that share code and knowledge is awesome.
-    ##  Feel free to share and modify this piece of code. But don't be
-    ##  impolite and remember to cite the author and give him his credits.
-    ##* ****************************************************************
-
     library(jsonlite, quietly = TRUE )
     library(feather, quietly = TRUE )
     library(ggplot2, quietly = TRUE )
@@ -62,6 +70,13 @@
   #+END_SRC
 
 * Exploratory
+
+  * Colocar link para folder com todos os graficos
+  * Colocar apenas grafico diferente q fiz
+    * word viz
+    * histograms of the most common words
+    * Exploratory  com relations diferentes
+  
 
   Select main contribution or changes only
   
@@ -273,466 +288,14 @@
   #+END_SRC
 
 * Model
-** Development
-   
-*** Data design (train, test n ensenble dataset)
 
-    #+begin_src R
-      library(caret)
-      ##library(plyr)
-      library(ggplot2)
-      library(gridExtra)
-      library(pROC)
-      library(tictoc)
-
-      library(doMC)
-      registerDoMC(cores = 7)
-
-      library(feather, quietly = TRUE )
-      library(jsonlite, quietly = TRUE )
-      source("./utils/data.R")
-      source("./utils/utils.R")
-      source("./utils/report.R")
-      source("./utils/model.R")
-
-      settings   <- fromJSON( "SETTINGS.json", flatten=TRUE)
-
-      cat('Loading data engineer...\n')
-      raop.engineer <- readRDS(settings$data_engineer_path)
-
-      data.target <- raop.engineer$GetDataTarget()
-
-
-      ## ----------------------------------- [ Data processing ]
-      data.target <- data.target[, c("requester_upvotes_minus_downvotes_at_request",
-                                 "nword",
-                                 "requester_account_age_in_days_at_request",
-                                 "requester_days_since_first_post_on_raop_at_request",
-                                 "requester_number_of_posts_at_request",
-                                 "requester_number_of_posts_on_raop_at_request",
-                                 "money.score",
-                                 "desire.score",
-                                 "family.score",
-                                 "job.score",
-                                 "student.score",
-                                 "post.sent",
-                                 "has.link",
-                                 "gratitude",
-                                 "reciprocity",
-                                 "is.weekend",
-                                 "community_age",
-                                 "first.half.of.month",
-                                 "posted.raop.before",                           
-                                 "requester_received_pizza")]
-
-      data.target$has.link <- as.numeric(data.target$has.link)
-      data.target$first.half.of.month <- as.numeric(data.target$first.half.of.month)
-      data.target$posted.raop.before <- as.numeric(data.target$posted.raop.before)
-      data.target$gratitude <- as.numeric(data.target$gratitude)
-      data.target$reciprocity <- as.numeric(data.target$reciprocity)
-      data.target$is.weekend <- as.numeric(data.target$is.weekend)
-
-      data.target$requester_received_pizza <- as.factor(data.target$requester_received_pizza)
-      levels(data.target$requester_received_pizza) <- list("fail" = FALSE, "success" = TRUE)
-
-      set.seed(2014)
-      train_ind = createDataPartition(data.target$requester_received_pizza,
-                                     p = .80, list = FALSE)
-
-      train_te = data.target[-train_ind, ]    # 20% test
-
-      train_m = data.target[train_ind, ]  # 80% for models
-
-      set.seed(2014)
-      train_ind = createDataPartition(train_m$requester_received_pizza,
-                                     p = .50, list = FALSE)
-
-      train_tr = train_m[train_ind,]  ## 50% to train each model
-      train_es = train_m[-train_ind,] ## 50% to train ensemble model 
-
-      ## train the training set
-
-      labelName    <- "requester_received_pizza"  
-      ind_vars <- names(train_tr)[names(train_tr) != labelName ]
-
-      cat(dim(train_te))
-      cat(dim(train_tr))
-      cat(dim(train_es))
-
-      ctrl = trainControl(method = 'cv', summaryFunction = twoClassSummary, classProbs = T)
-    #+end_src
-
-*** Logistic Regredssion
-
-    Meu melhor modelo e aparentemente melhor do que o blog que esu
-    estava seguindo e com bem menos variaveis com AUC maios
-
-    My best model looks like is better than my references (blog) but
-    with small number of predictors
-
-    AUC: 0.675 vs 0.669 (paper) vs 0.664 (blog)
-
-    #+begin_src R
-
-      ## ------------------------------- [ Logistic Regression ]
-      set.seed(2014)
-      tic("Training: GLM .....")
-      logit_m <- train(requester_received_pizza ~
-                          requester_upvotes_minus_downvotes_at_request +
-                          community_age +
-                          nword + has.link + post.sent + posted.raop.before +
-                          reciprocity + 
-                          family.score + student.score,
-                      data = train_tr,
-                      method = 'glm', metric = 'ROC', trControl = ctrl)
-
-      toc()
-
-      params <- list()
-      params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
-                                              "Logistic regression tunned mannually based on exploratory phase.")
-
-      params$auc_val <- logit_m$results$ROC
-      params$features <- c("requester_upvotes_minus_downvotes_at_request,community_age,
-      nword,has.link, post.sent, posted.raop.before, reciprocity,family.score,student.scor")
-
-      auc_es <- GetRAoPAUC(logit_m,train_es[,ind_vars],train_es$requester_received_pizza)
-      cat("auc_train_es:", auc_es)
-
-      ## logit_m <- readRDS("models/2017-01-25-lhof-logit_tunned.rds")
-      SaveRAoPModel(logit_m,"logit_tunned",params,settings)
-
-   #+end_src
-
-*** GBM
-
+  * procedimento determinar model vs data size
+  * Explicar quais modelos tunei e como talvez colocar um exmplo ou grafico
+  * ensemble
+  * model comparision
+  * performance na base de teste
+  * explicacao do permutation test e link 
     
-    Como eu melhore este resultado? Preciso fazer os graficos de tunning do caret
-
-    Do this plot form caret tutorials.
-
-    http://topepo.github.io/caret/model-training-and-tuning.html
-    http://machinelearningmastery.com/pre-process-your-dataset-in-r/
-    
-
-    lost tunned model
-    shrinkage: 0.005; ntree: 1500; depth: 4; auc: 0.75; time: ~2.0 minute
-    [[file:scratch/gbm_shr0.005_ntree1500_depth4_auc0.75.png]]
-
-    
-    shrinkage: 0.005; ntree: 800; depth: 7; auc: 0.693; time: ~1.0 minute
-    [[file:scratch/gbm_shr0.005_ntree800_depth7_auc0.693.png]]
-
-
-   #+begin_src R
-
-     ## ----------------------------------------------- [ GBM ]
-     gbm_tune = expand.grid( interaction.depth = c( 4,5, 6,7,8),
-                            n.trees = c(400,500, 600, 700, 800, 900, 1000, 1100,1200, 1500, 2000),
-                            shrinkage = c(.005),
-                            n.minobsinnode = 9)
-
-     set.seed(2014)
-     tic("Training: GBM .....")
-     gbm_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
-                   method = 'gbm', tuneGrid = gbm_tune,
-                   metric = 'ROC', verbose = F, trControl = ctrl)
-
-     toc()
-
-     params <- list()
-     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
-                                             "GBM tunned")
-
-     params$auc_val   <- max(gbm_m$results$ROC)
-     params$ntree     <- gbm_m$finalModel$n.trees
-     params$depth     <- gbm_m$finalModel$interaction.depth
-     params$shrinkage <- gbm_m$finalModel$n.trees
-
-
-     ## gbm_m <- readRDS("models/2017-01-25-lhof-gbm_tunned.rds")
-     auc_es <- GetRAoPAUC(gbm_m,train_es[,ind_vars],train_es$requester_received_pizza)
-     cat("auc_train_es:", auc_es)
-
-
-     SaveRAoPModel(gbm_m,"gbm_tunned",params,settings)
-
-   #+end_src
-
-*** Random Forest
-    
-    | mtry | ntree |    AUC | comm |
-    |------+-------+--------+------|
-    |    3 |   300 |  0.675 |      |
-    |    2 |  1000 |  0.676 |      |
-    |    2 |  1500 | 0.6759 |      |
-    |    2 |  1750 | 0.6761 |      |
-    |    2 |  2000 |  0.678 | best |
-    |    2 |  2250 |  0.675 |      |
-    |    2 |  2500 |  0.676 |      |
-    |    3 |  3000 |  0.676 |      |
-    |      |  4500 |        |      |
-    |------+-------+--------+------|
-
-    
-    mtry: 2; ntree: 2000; auc: 0.680
-    
-   #+begin_src R
-     ## ------------------------------------- [ Random Forest ]
-     #random forests (mtry = 2, roc = .656)
-     rf_tune = expand.grid(.mtry =  seq(2,5,1))
-
-     set.seed(2014)
-     tic("Training: RF .....")
-     rf_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
-                  method = 'rf', ntree = 2250, metric = 'ROC', 
-                  tuneGrid = rf_tune, trControl = ctrl, importance = T)
-
-     toc()
-
-
-     params <- list()
-     params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
-                                             "RF tunned")
-
-     params$auc_val   <- max(rf_m$results$ROC)
-     params$ntree     <-  rf_m$finalModel$ntree
-     params$mtry     <-  rf_m$finalModel$mtry
-
-     ## rf_m <- readRDS("models/2017-01-26-lhof-rf_tunned.rds")
-     auc_es <- GetRAoPAUC(rf_m,train_es[,ind_vars],train_es$requester_received_pizza)
-     cat("auc_train_es:", auc_es)
-
-     SaveRAoPModel(rf_m,"rf_tunned",params,settings)
-
-   #+end_src
-   
-*** Neura Network
-
-    Probably the neural network is the one most affetcted by the
-    sample size
-    
-    file:scratch/2017-01-22-lhof-nnet_decay3_size4_auc0.693.png
-    
-   #+begin_src R
-     ## ------------------------------------ [ Neural Network ]
-     #nnet (size = 4, decay = 2, roc = .669)
-     nnet_tune = expand.grid(size = seq(1,10,1), decay = c(2,3,4))
-
-     set.seed(2014)
-     tic("Training: Neural Net .....")
-     nnet_m = train(x = train_tr[, ind_vars], y = train_tr$requester_received_pizza,
-                    method = 'nnet',maxit = 1000, tuneGrid = nnet_tune,
-                    metric = 'ROC', preProc = c('center', 'scale'),
-                    verbose = F,
-                    trControl = ctrl)
-
-     toc()
-
-     params <- list()
-     params <- CreateRAoPModelDefaultsParams(params,train_data = train_es,
-                                                  "stack gbm tunned")
-
-
-     params$auc_val   <- max(stack_m$results$ROC)
-     params$ntree     <- stack_m$finalModel$n.trees
-     params$depth     <- stack_m$finalModel$interaction.depth
-     params$shrinkage <- stack_m$finalModel$n.trees
-
-
-     ## stack_m <- readRDS("models/2017-01-29-lhof-stack_tunned.rds")
-     auc_es <- params$auc_val
-     cat("auc_train_es:", auc_es)
-
-     SaveRAoPModel(stack_m,"stack_tunned",params,settings)
-   #+end_src
-
-*** SVM
-
-
-    Model with low performance compared to the others.
-    Do not include it in the analysis.
-
-    [2017-01-22 Sun]
-    dim(train_r):  4085   21
-    
-   #+begin_src R
-      ## ----------------------------------------------- [ SVM ]
-
-      # Use the expand.grid to specify the search space	
-      svm_tune  <- expand.grid(sigma = c(0.001, 0.01, .05),
-                               C = c(0.5, 0.75, 0.9, 1, 1.1, 1.25))
-
-      set.seed(2014)
-      tic("Training: SVM .....")
-      svm_m <- train( x = train_tr[ , ind_vars], y = train_tr$requester_received_pizza,
-                     method = "svmRadial", tuneGrid = svm_tune,
-                     metric = "ROC", preProc = c("center", "scale"),
-                     verbose= F,
-                     trControl = ctrl)
-
-
-      svm_imp = varImp(svm_m)
-      svm_imp$model <- "SVM"
-      toc()
-   #+end_src
-
-*** Simple Model
-    
-    Best model with single predictor
-
-   #+begin_src R
-          ## --------------------------------- [ best simple model ]
-
-          set.seed(2014)
-          tic("Training: Simple model .....")
-          simple_m <- train(requester_received_pizza ~ nword,
-                                data = train_tr,
-                            method = 'glm', metric = 'ROC', trControl = ctrl)
-
-
-          toc()
-
-          params <- list()
-          params <- CreateRAoPModelDefaultsParams(params,train_data = train_tr,
-                                                  "Simple model Logistic regression using nword only.")
-
-          params$auc_val <- simple_m$results$ROC
-          params$features <- "nword"
-     
-          auc_es <- GetRAoPAUC(simple_m,train_es[,ind_vars],train_es$requester_received_pizza)
-          cat("auc_train_es:", auc_es)
-
-          ## simple_m <- readRDS("models/2017-01-26-lhof-simple_tunned.rds")
-          SaveRAoPModel(simple_m,"simple_tunned",params,settings)
-
-          simple_p <- predict(simple_m, list(nword = train_te$nword),type="response")
-   #+end_src
-   
-*** Ensemble
-    
-
-    Ensemble model: lo
-
-    file:scratch/2017-01-29-lhof-stack_gbm_depth2_ntree1700_auc0.832.png
-
-   #+begin_src R
-     ## ----------------------------------- [ Ensemble Stack  ]
-
-     train_te <- RAoPStackEnsembleDataPrepare(train_te,ind_vars,logit_m, gbm_m, rf_m, nnet_m)
-     train_es <- RAoPStackEnsembleDataPrepare(train_es,ind_vars,logit_m, gbm_m, rf_m, nnet_m)
-
-     stack_tune = expand.grid( interaction.depth = c(1,2,3),
-                            n.trees = seq(1600, 1800, 10),
-                            shrinkage = c(.01),
-                            n.minobsinnode = 9)
-
-     set.seed(2014)
-     tic("Training: Ensemble GBM ....")
-
-     stack_vars <- names(train_es)[names(train_es) != labelName ]
-
-     stack_m  <- train(x = train_es[, stack_vars], y = train_es$requester_received_pizza,
-                       method = 'gbm', tuneGrid = stack_tune,
-                       metric = 'ROC', verbose = F, trControl = ctrl)
-
-     params <- list()
-     params <- CreateRAoPModelDefaultsParams(params,train_data = train_es,
-                                             "stack gbm tunned")
-
-     params$auc_val   <- max(stack_m$results$ROC)
-     params$depth     <- stack_m$finalModel$tuneValue$decay
-     params$size     <-  stack_m$finalModel$tuneValue$size
-
-     auc_es <- GetRAoPAUC(stack_m,train_es[,ind_vars],train_es$requester_received_pizza)
-     cat("auc_train_es:", auc_es)
-
-     ## stack_m <- readRDS("models/2017-01-29-lhof-stack_tunned.rds")
-     SaveRAoPModel(stack_m,"stack_tunned",params,settings)
-
-   #+end_src
-
-*** Comparing Models
-
-    Change to the diagnostic section
-
-   #+begin_src R
-     ## ------------------------------- [ Plot Var Importance ]
-     PlotRAoPImportance(logit_m, rf_m, gbm_m, nnet_m)
-
-     ## ---------------------------------- [ Comparing models ]
-     ## compare models algorithms (legal esta metodo)
-     resamps <- resamples(list(LOGIT = logit_m,
-                               GBM = gbm_m,
-                               RF  = rf_m,
-                               NNET = nnet_m,
-                               SIMPLE = simple_m,
-                               STACK = stack_m))
-
-     summary(resamps)
-
-     bwplot(resamps, layout = c(1, 3))
-
-     ## --------------------------------------- [ Correlations n  ]
-
-     GetRAopConfusionMatrix(logit_m, train_es[,ind_vars], train_es$requester_received_pizza)
-     GetRAopConfusionMatrix(gbm_m, train_es[,ind_vars], train_es$requester_received_pizza)
-     GetRAopConfusionMatrix(rf_m, train_es[,ind_vars], train_es$requester_received_pizza)
-     GetRAopConfusionMatrix(nnet_m, train_es[,ind_vars], train_es$requester_received_pizza)
-
-     GetRAoPModelsCorrelation(logit_m, gbm_m, rf_m, nnet_m)
-
-    #+end_src
-
-   #+begin_src R
-     ## compare models algorithms (legal esta metodo)
-     resamps <- resamples(list(LOGIT = logit_m,
-                               GBM = gbm_m,
-                               RF  = rf_m,
-                               NNET = nnet_m,
-                               SIMPLE = simple_m))
-
-     summary(resamps)
-
-     bwplot(resamps, layout = c(1, 3))
-     bwplot(resamps, layout = c(1, 1)) # 3 plots with sens, spec n auc on separated window
-   #+end_src
-  
-   #+begin_src R
-
-     ## --------------------------------- [ Ensemble Baggging ]
-     ## combine results
-
-     median_p <- RAoPGetStackMedianPrediction(train_te[,ind_vars], 'prob', logit_m, rf_m, gbm_m, nnet_m)
-     mean_p   <- RAoPGetStackMeanPrediction(train_te[,ind_vars], 'prob', logit_m, rf_m, gbm_m, nnet_m)
-
-    roc(train_te$requester_received_pizza,mean_p)
-    roc(train_te$requester_received_pizza,median_p)
-    cat(GetRAoPAUC(stack_m,train_te[,stack_vars],train_te$requester_received_pizza))
-
-   #+end_src
-
-   [[file:scratch/2017-01-29-lhof-models_comparative_auc.png]]
-   
-** Diagnostics
-   
-   Permutation test. Explain what is this test. And why I did.  Reason
-   is to get familiar with the test. In this case was not useful or
-   necessary to do it.
-   
-   #+begin_src R
-     tic("Permutation test:.....")
-     ## XXX nperm = 128 takes 47 minutes
-     vauc <- RAoPPermutationTest(train_tr[,ind_vars], train_tr$requester_received_pizza, 128)
-     toc()
-
-     saveRDS(vauc,"scratch/2017-01-29-lhof-permutation_test_vauc.rds")
-     hist(vauc)
-    #+end_src
-
 * Conclusion
 
-  #+begin_src R
-    print('Final Model AUC:')
-    cat(GetRAoPAUC(stack_m,train_te[,stack_vars],train_te$requester_received_pizza))
-  #+end_src
+  
