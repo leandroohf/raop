@@ -7,9 +7,9 @@ In this project data from online community Random Act of Pizza (RAoP)
 forum was analyzed. The data is a collection of post where reddit's
 users are requesting free pizza. Sentimental analyses were performed
 in the data and the findings were used to build a model to predict if
-the post written by the user will be successful. A better explanation
-with more detail can be found in the links below.
-
+the post written by the user will be successful. The link for the
+analysis can be found [here](raop.org) and a better explanation with
+more detail can be found in the links below.
 
 Stanford article
 [http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf](http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf)
@@ -23,6 +23,9 @@ Link for data source
 Link for redidt forum
 [https://www.reddit.com/r/Random_Acts_Of_Pizza/](https://www.reddit.com/r/Random_Acts_Of_Pizza/)
 
+Link for the anlaysis:
+[raop.org](raop.org)
+
 ## Learn goals
 
 1. Get familiar with sentimental anlaysys 
@@ -30,16 +33,3 @@ Link for redidt forum
 3. Gain expertise with ensemble techniques
 4. Test new diagnostic tools Permutation test
 5. Get familiar with Ariflow (**TODO**)
-
-## Run steps to predict
-
-NOT entired ready yet
-
-Link for dev org file:
-[raop.org](raop.org)
-    
-* pred.R
-* Optional
-  * data_wrangler.R (Features engineering)
-  * descriptive.R (summary data and do some plots)
-  * model_dev.R (to see the model and some model diagnostics)
