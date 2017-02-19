@@ -30,17 +30,8 @@
 
 * Data
 
-  * mostrar a cara do dado
-  * 
-
-    We select the variable in the target data frame below for the
-    exploratory analysis
-    
-  ================================= Importante
-
-  * MOstra a cara do dado
-    * post exemplos
-    * head dataframe
+  * Show the data face
+  * Present a post  exampleand the first dataframe lines
   * Explain all data transformation
     * convert to decile
     * why i did not consider negative values
@@ -49,7 +40,10 @@
       the decile zero.
       
       Ex: 100 posts in 0th decile and 5 posts in 7th decile.
-      
+
+    We select the variable in the target data frame below for the
+    exploratory analysis
+    
   #+BEGIN_SRC R :session :tangle raop.R :results none
     library(jsonlite, quietly = TRUE )
     library(feather, quietly = TRUE )
@@ -71,13 +65,12 @@
 
 * Exploratory
 
-  * Colocar link para folder com todos os graficos
-  * Colocar apenas grafico diferente q fiz
+  * Insert link to folders woth all graphs
+  * Insert only your graphs contributions (what we did different?)
     * word viz
     * histograms of the most common words
-    * Exploratory  com relations diferentes
+    * Exploratory relations in the data
   
-
   Select main contribution or changes only
   
   #+BEGIN_SRC R :session :tangle exp.R
@@ -106,8 +99,8 @@
 
   #+END_SRC
   
-  *Um pto que fiz diferente* Entao eu devo colocar separado.
-  
+  *POint that I did different*
+
   #+BEGIN_SRC R :session :tangle exp.R
     ## =================================
     ## post sent
@@ -289,12 +282,12 @@
 
 * Model
 
-  * procedimento determinar model vs data size
-  * Explicar quais modelos tunei e como talvez colocar um exmplo ou grafico
-  * ensemble
+  * Add study data size vs model performance to determine train , test n val size 
+  * Explain the tuned models and one exmple of tuning code and plot
+  * Explain ensemble
   * model comparision
-  * performance na base de teste
-  * explicacao do permutation test e link 
+  * performance in test 
+  * Explanarion about permutation test n link 
     
 * Conclusion
 
