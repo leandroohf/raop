@@ -1,5 +1,5 @@
 
-# Random Act of Pizaa: (WIP)
+# Random Act of Pizza: (WIP)
     
 **This is a work in progress**
 
@@ -9,8 +9,10 @@ users are requesting free pizza. Sentimental analyses were performed
 in the data and the findings were used to build a model to predict if
 the post written by the user will be successful. A better explanation
 with more detail can be found in the links below.
-    
-[Stanford article](http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf)
+
+
+Stanford article
+[http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf](http://cs.stanford.edu/~althoff/raop-dataset/altruistic_requests_icwsm.pdf)
 
 Link to references: 
 [http://www.runzemc.com/2014/08/random-acts-of-pizza.html](http://www.runzemc.com/2014/08/random-acts-of-pizza.html)
@@ -27,12 +29,11 @@ Link for redidt forum
 2. Improve expertise in tune machine learning models
 3. Gain expertise with ensemble techniques
 4. Test new diagnostic tools Permutation test
-5. Get familiar woth Ariflow
+5. Get familiar with Ariflow (**TODO**)
 
 ## Run steps to predict
 
 NOT entired ready yet
-
 
 Link for dev org file:
 [raop.org](raop.org)
