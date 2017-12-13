@@ -89,10 +89,15 @@
 
     grid.arrange(p.karma, p.account.age, p.community.age, ncol = 3)
 
+    fname <- PrepareFileName('plot_karma_account_age_n_community_age.png')
+    
+    png(fname)
+    grid.arrange(p.karma, p.account.age, p.community.age, ncol = 3)
+    dev.off()
   #+END_SRC
   
-  *Um pto que fiz diferente* Entao eu devo colocar separado.
-  
+  Maybe add this point 
+
   #+BEGIN_SRC R :session :tangle exp.R
     ## =================================
     ## post sent
@@ -122,15 +127,15 @@
                             narrative=character())
 
     for ( narrative in cols.narratives){
-    
+
         narrative.view <- data.view0 %>%
             na.omit() %>%
             dplyr::group_by_( narrative ) %>%
             dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())  %>%
             dplyr::mutate(narrative)
-    
+
         names(narrative.view)[1] <- "decile" 
-    
+
         data.view <- rbind(data.view, narrative.view)
     }
 
@@ -139,7 +144,10 @@
         scale_x_continuous(breaks = seq(0, 10, 1), name = 'Narrative declie') +
         scale_y_continuous(name = 'Success rate')
 
-    p
+    print(p)
+
+    fname <- PrepareFileName('plot_succes_rate_vs_narrative_decile.png')
+    ggsave(fname)    
 
   #+END_SRC
 
@@ -154,6 +162,8 @@
     names(data.view)[1] <- c("first_half")
     p <- ggplot(data.view, aes(x=first_half,y=success_rate)) + geom_bar(stat = 'identity')
 
+
+    print(p)
     summary(aov(  requester_received_pizza ~ first.half.of.month, data.target ))
 
     ## =================================
@@ -165,6 +175,7 @@
 
     names(data.view)[1] <- c("is_weekend")
     p <- ggplot(data.view, aes(x=is_weekend,y=success_rate)) + geom_bar(stat = 'identity')
+    print(p)
 
     ## =================================
     ## month
@@ -175,6 +186,7 @@
 
     names(data.view)[1] <- c("month")
     p <- ggplot(data.view, aes(x=month,y=success_rate)) + geom_bar(stat = 'identity')
+    print(p)
 
     ## =================================
     ## month day
@@ -185,6 +197,7 @@
 
     names(data.view)[1] <- c("month_day")
     p <- ggplot(data.view, aes(x=month_day,y=success_rate)) + geom_bar(stat = 'identity')
+    print(p)
 
     ## =================================
     ## week day
@@ -273,8 +286,7 @@
   #+END_SRC
 
 * Model
-** Development
-   
+** Development   
 *** Data design (train, test n ensenble dataset)
 
     #+begin_src R
@@ -473,7 +485,6 @@
     |    3 |  3000 |  0.676 |      |
     |      |  4500 |        |      |
     |------+-------+--------+------|
-
     
     mtry: 2; ntree: 2000; auc: 0.680
     
@@ -507,7 +518,7 @@
 
    #+end_src
    
-*** Neura Network
+*** Neural Network
 
     Probably the neural network is the one most affetcted by the
     sample size
@@ -534,17 +545,17 @@
                                                   "stack gbm tunned")
 
 
-     params$auc_val   <- max(stack_m$results$ROC)
-     params$ntree     <- stack_m$finalModel$n.trees
-     params$depth     <- stack_m$finalModel$interaction.depth
-     params$shrinkage <- stack_m$finalModel$n.trees
+     params$auc_val   <- max(nnet_m$results$ROC)
+     params$ntree     <- nnet_m$finalModel$n.trees
+     params$depth     <- nnet_m$finalModel$interaction.depth
+     params$shrinkage <- nnet_m$finalModel$n.trees
 
 
      ## stack_m <- readRDS("models/2017-01-29-lhof-stack_tunned.rds")
      auc_es <- params$auc_val
      cat("auc_train_es:", auc_es)
 
-     SaveRAoPModel(stack_m,"stack_tunned",params,settings)
+     SaveRAoPModel(nnet_m,"stack_tunned",params,settings)
    #+end_src
 
 *** SVM
@@ -557,24 +568,24 @@
     dim(train_r):  4085   21
     
    #+begin_src R
-      ## ----------------------------------------------- [ SVM ]
+     ## ----------------------------------------------- [ SVM ]
 
-      # Use the expand.grid to specify the search space	
-      svm_tune  <- expand.grid(sigma = c(0.001, 0.01, .05),
-                               C = c(0.5, 0.75, 0.9, 1, 1.1, 1.25))
+     # Use the expand.grid to specify the search space	
+     svm_tune  <- expand.grid(sigma = c(0.001, 0.01, .05),
+                              C = c(0.5, 0.75, 0.9, 1, 1.1, 1.25))
 
-      set.seed(2014)
-      tic("Training: SVM .....")
-      svm_m <- train( x = train_tr[ , ind_vars], y = train_tr$requester_received_pizza,
-                     method = "svmRadial", tuneGrid = svm_tune,
-                     metric = "ROC", preProc = c("center", "scale"),
-                     verbose= F,
-                     trControl = ctrl)
+     set.seed(2014)
+     tic("Training: SVM .....")
+     svm_m <- train( x = train_tr[ , ind_vars], y = train_tr$requester_received_pizza,
+                    method = "svmRadial", tuneGrid = svm_tune,
+                    metric = "ROC", preProc = c("center", "scale"),
+                    verbose= F,
+                    trControl = ctrl)
 
 
-      svm_imp = varImp(svm_m)
-      svm_imp$model <- "SVM"
-      toc()
+     svm_imp = varImp(svm_m)
+     svm_imp$model <- "SVM"
+     toc()
    #+end_src
 
 *** Simple Model
@@ -683,7 +694,7 @@
      GetRAoPModelsCorrelation(logit_m, gbm_m, rf_m, nnet_m)
 
     #+end_src
-
+    
    #+begin_src R
      ## compare models algorithms (legal esta metodo)
      resamps <- resamples(list(LOGIT = logit_m,

@@ -27,7 +27,6 @@
   4. Test new diagnostic tools Permutation test
   5. Get familiar with Ariflow (**TODO**)
 
-
 * Data
 
   * Show the data face
@@ -130,15 +129,15 @@
                             narrative=character())
 
     for ( narrative in cols.narratives){
-    
+
         narrative.view <- data.view0 %>%
             na.omit() %>%
             dplyr::group_by_( narrative ) %>%
             dplyr::summarise( success_rate = sum( requester_received_pizza )/ n())  %>%
             dplyr::mutate(narrative)
-    
+
         names(narrative.view)[1] <- "decile" 
-    
+
         data.view <- rbind(data.view, narrative.view)
     }
 
@@ -282,8 +281,11 @@
 
 * Model
 
+
+  See code:  dev/2017-01-05-lhof-raop_exploratory_n_model_dev.org
+
   * Add study data size vs model performance to determine train , test n val size 
-  * Explain the tuned models and one exmple of tuning code and plot
+  * Explain the tuned models and one example of tuning code and plot
   * Explain ensemble
   * model comparision
   * performance in test 
