@@ -3,8 +3,8 @@
     
 **This is a work in progress**
 
-In this project data from online community Random Act of Pizza (RAoP)
-forum was analyzed [here](https://www.reddit.com/r/Random_Acts_Of_Pizza/). 
+In this project data from online community Random Act of Pizza ([RAoP](https://www.reddit.com/r/Random_Acts_Of_Pizza/))
+forum was analyzed. 
 The data is a collection of post where reddit's
 users are requesting free pizza. Sentimental analyses were performed
 in the data and the findings were used to build a model to predict if
